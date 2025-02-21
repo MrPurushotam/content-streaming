@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int               @id @default(autoincrement())
+  email         String            @unique
+  password      String
+  fullname      String
+  username      String            @unique
+  role          String // Admin or other roles
+  approved      Boolean           @default(false)
+  lastLoggedIn  DateTime? // Nullable in case the user never logged in
+  videos        Content[] // Link to the Content table
+  primarySource VideoSourceInfo[] // Link to the VideoSourceInfo table
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Content {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String
+  description String
+  thumbnail   String // URL or path to thumbnail image
+  views       Int      @default(0)
+  public      Boolean  @default(true)
+  status      String   @default("uploaded") // "published", "draft", "deleted","uploading" 
+  manifestUrl String   @default("") // URL to the master manifest file (master.m3u8)
+  deleted     Boolean  @default(false)
+  uploadTime  DateTime @default(now())
+  uniqueId    String   @unique
+
+  bitRates  BiteRateVideo[] // Link to BiteRateVideo table
+  user      User            @relation(fields: [userId], references: [id])
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model BiteRateVideo {
+  id         Int      @id @default(autoincrement())
+  resolution String // e.g., "1080p", "720p", "360p"
+  url        String // URL to the video file in the secondary S3 bucket
+  contentId  Int
+  content    Content  @relation(fields: [contentId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// write a model to store videoName, unique id associae with the video so that once a video is successfully uploaded to bucket then it can be updated using that unique id.
+
+model VideoSourceInfo {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  uniqueId  String   @unique
+  status    String   @default("pending") // "uploaded", "pending", "failed"
+  location  String   @default("") // URL to the video file in the primary S3 bucket
+  deleted   Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
