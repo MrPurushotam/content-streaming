@@ -8,7 +8,7 @@ const router = Router();
 const path = require('path');
 const { strictLimit, generousLimit } = require("../middleware/rateLimiting");
 
-router.post("/login",strictLimit, async (req, res) => {
+router.post("/login", strictLimit, async (req, res) => {
     try {
         console.log(req.body)
         const { email, password } = req.body;
@@ -34,7 +34,7 @@ router.post("/login",strictLimit, async (req, res) => {
         if (!user.approved && user.role === "admin") {
             return res.status(200).json({ success: true, approved: false, message: "Your account isn't approved please come again later." });
         }
-        const token = createToken({ id: user.id, email: user.email, role: user.role, username: user.username, });
+        const token = createToken({ id: user.id, email: user.email, role: user.role, username: user.username });
         const userData = {
             email: user.email,
             role: user.role,
@@ -54,7 +54,7 @@ router.post("/login",strictLimit, async (req, res) => {
     }
 })
 
-router.post("/signup",strictLimit, async (req, res) => {
+router.post("/signup", strictLimit, async (req, res) => {
     try {
         const { email, password, fullname, role, username } = req.body;
         if (!email || !password || !fullname || !role || !username) {
@@ -103,16 +103,16 @@ router.post("/signup",strictLimit, async (req, res) => {
 
 router.use(authorizeHeader);
 
-router.get("/",strictLimit, (req, res) => {
+router.get("/", strictLimit, (req, res) => {
     try {
-        return res.status(200).json({ data: { email: req.email, role: req.role, id: req.id }, success: true });
+        return res.status(200).json({ data: { email: req.email, role: req.role, id: req.id, username: req.username }, success: true });
     } catch (error) {
         console.error(e.message);
         return res.status(500).json({ error: "Internal server error", success: false });
     }
 })
 
-router.get("/logout",strictLimit, (req, res) => {
+router.get("/logout", strictLimit, (req, res) => {
     try {
         return res.json({ success: true, message: "Logged out successfully" });
     } catch (error) {
@@ -124,7 +124,7 @@ router.get("/logout",strictLimit, (req, res) => {
 // send list of unapproved users THOUGHT here we can add pagination such that if user list is too long then we can send list in multiple requests. 
 //TODO: Add a admin role check before it else it won't be of any sense 
 
-router.use(adminAuthorizer,generousLimit);
+router.use(adminAuthorizer, generousLimit);
 router.get("/list/:choice?", async (req, res) => {
     try {
         const choice = req.params.choice || "default";

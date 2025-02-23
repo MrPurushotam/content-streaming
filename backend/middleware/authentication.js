@@ -12,6 +12,7 @@ const authorizeHeader = (req, res, next) => {
             req.id = data.id;
             req.email = data.email;
             req.role = data.role;
+            req.username = data.username;
             next();
         } else {
             res.status(401).json({ message: "No authorization header provided", success: false });
