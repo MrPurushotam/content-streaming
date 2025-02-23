@@ -22,7 +22,7 @@ const useLoggedinUser = () => {
                 }
                 return;
             }
-            setUser(data.user);
+            setUser(data.data);
             setIsAdmin(data.role === "admin");
         }
         // THOUGHT: Here i want to add a way such that on error we recurssevily fetch detail ones we get it we end the recuresion there
