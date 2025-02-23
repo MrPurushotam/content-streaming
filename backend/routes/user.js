@@ -5,8 +5,10 @@ const authorizeHeader = require("../middleware/authentication");
 const { createToken } = require("../utils/common");
 const adminAuthorizer = require("../middleware/admin");
 const router = Router();
-const path = require('path')
-router.post("/login", async (req, res) => {
+const path = require('path');
+const { strictLimit, generousLimit } = require("../middleware/rateLimiting");
+
+router.post("/login",strictLimit, async (req, res) => {
     try {
         console.log(req.body)
         const { email, password } = req.body;
@@ -52,7 +54,7 @@ router.post("/login", async (req, res) => {
     }
 })
 
-router.post("/signup", async (req, res) => {
+router.post("/signup",strictLimit, async (req, res) => {
     try {
         const { email, password, fullname, role, username } = req.body;
         if (!email || !password || !fullname || !role || !username) {
@@ -101,7 +103,7 @@ router.post("/signup", async (req, res) => {
 
 router.use(authorizeHeader);
 
-router.get("/", (req, res) => {
+router.get("/",strictLimit, (req, res) => {
     try {
         return res.status(200).json({ data: { email: req.email, role: req.role, id: req.id }, success: true });
     } catch (error) {
@@ -110,7 +112,7 @@ router.get("/", (req, res) => {
     }
 })
 
-router.get("/logout", (req, res) => {
+router.get("/logout",strictLimit, (req, res) => {
     try {
         return res.json({ success: true, message: "Logged out successfully" });
     } catch (error) {
@@ -122,7 +124,7 @@ router.get("/logout", (req, res) => {
 // send list of unapproved users THOUGHT here we can add pagination such that if user list is too long then we can send list in multiple requests. 
 //TODO: Add a admin role check before it else it won't be of any sense 
 
-router.use(adminAuthorizer)
+router.use(adminAuthorizer,generousLimit);
 router.get("/list/:choice?", async (req, res) => {
     try {
         const choice = req.params.choice || "default";
@@ -148,10 +150,12 @@ router.get("/list/:choice?", async (req, res) => {
                 createdAt: "desc"
             },
             select: {
+                id: true,
                 username: true,
                 email: true,
                 fullname: true,
-                role: true
+                role: true,
+                createdAt: true,
             },
             skip,
             take: limit

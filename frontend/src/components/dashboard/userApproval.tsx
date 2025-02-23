@@ -21,11 +21,9 @@ const UserApproval = ({ user, onApprovalChange }: UserApprovalProps) => {
   const [choice, setChoice] = useState<boolean | null>(null);
 
   const handleApproval = (status: boolean) => {
-    console.log(status)
     setChoice(status);
     onApprovalChange(user?.id, status);
   };
-
   return (
     <div className="flex items-center justify-between w-full p-3 border rounded-lg shadow-sm bg-white hover:shadow-md transition-all">
       <div
@@ -39,7 +37,7 @@ const UserApproval = ({ user, onApprovalChange }: UserApprovalProps) => {
           <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-white border rounded-lg shadow-lg z-10">
             <p className="text-sm font-medium">Full Name: {user.fullname}</p>
             <p className="text-sm text-gray-600">Email: {user.email}</p>
-            <p className="text-sm text-gray-600">Joined At: {user.createdAt}</p>
+            <p className="text-sm text-gray-600">Joined At: {new Date(user.createdAt).toLocaleDateString()}</p>
           </div>
         )}
       </div>

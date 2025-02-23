@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import useLoggedinUser from '@/hooks/custom-hooks/useLoggedinUser';
 import Spinner from '@/components/spinner';
 import { isAdminAtom, isLoggedInAtom, userAtom } from '@/store/atoms';
+import Seo from "@/components/seo/seo";
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -29,10 +30,10 @@ export default function AuthPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    
+
     const { toast } = useToast();
     const router = useNavigate();
-    
+
     const setAdmin = useSetRecoilState(isAdminAtom);
     const setUserLoggedIn = useSetRecoilState(isLoggedInAtom);
     const setUser = useSetRecoilState(userAtom);
@@ -111,7 +112,7 @@ export default function AuthPage() {
 
             if (isLogin && response.data.user.role === "user" || isLogin && response.data.approved && response.data.user.role === "admin") {
                 window.localStorage.setItem("token", response.data.token);
-                if(response.data?.adminToken){
+                if (response.data?.adminToken) {
                     window.localStorage.setItem("adminToken", response.data.adminToken);
                 }
                 setUser(response.data.user);
@@ -138,164 +139,174 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-neutral-700/70">
-            <Card className="w-[400px] shadow-md shadow-blue-700" autoSave={'true'}>
-                <CardHeader className='items-center flex justify-center'>
-                    <CardTitle className='text-2xl font-bold text-blue-700'>{isLogin ? 'Login' : 'Sign Up'}</CardTitle>
-                    <CardDescription className='text-lg font-semibold text-gray-700'>
-                        {isLogin ? 'Enter your credentials to login' : 'Create a new account'}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4" autoSave="true">
-                        <div className="space-y-2">
-                            <Label htmlFor="email" className="flex justify-between items-center text-lg font-semibold pl-1">
-                                Email
-                                <div className="relative ml-1 group">
-                                    <Info className="w-4 h-4 text-gray-500" />
-                                    <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                                        {validateEmail(email) ? 'Email is valid' : 'Please enter a valid email address'}
-                                    </span>
-                                </div>
-                            </Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="m@example.com"
-                                value={email}
-                                onChange={(e) => {
-                                    setEmail(e.target.value);
-                                    checkFormValidity();
-                                }}
-                                required
-                            />
-                            {emailError && <i className="text-red-500 text-sm">{emailError}</i>}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password" className="flex justify-between items-center text-lg font-semibold pl-1">
-                                Password
-                                <div className="relative ml-1 group">
-                                    <Info className="w-4 h-4 text-gray-500" />
-                                    <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                                        {validatePassword(password) ? 'Password is valid' : 'Password must be at least 8 characters long'}
-                                    </span>
-                                </div>
-                            </Label>
-                            <div className="relative">
+        <>
+            <Seo
+                title={isLogin ? "Login" : "Sign Up"}
+                description={isLogin ? "Login to your account" : "Create a new account"}
+                keywords="login, signup, stream,video,watch,purushotam,purushotam jeswani,stream application"
+                name="Stream by Purushotam"
+                type="website"
+                address={"/login"}
+            />
+            <div className="flex items-center justify-center min-h-screen bg-neutral-700/70">
+                <Card className="w-[400px] shadow-md shadow-blue-700" autoSave={'true'}>
+                    <CardHeader className='items-center flex justify-center'>
+                        <CardTitle className='text-2xl font-bold text-blue-700'>{isLogin ? 'Login' : 'Sign Up'}</CardTitle>
+                        <CardDescription className='text-lg font-semibold text-gray-700'>
+                            {isLogin ? 'Enter your credentials to login' : 'Create a new account'}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4" autoSave="true">
+                            <div className="space-y-2">
+                                <Label htmlFor="email" className="flex justify-between items-center text-lg font-semibold pl-1">
+                                    Email
+                                    <div className="relative ml-1 group">
+                                        <Info className="w-4 h-4 text-gray-500" />
+                                        <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                            {validateEmail(email) ? 'Email is valid' : 'Please enter a valid email address'}
+                                        </span>
+                                    </div>
+                                </Label>
                                 <Input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    value={password}
+                                    id="email"
+                                    type="email"
+                                    placeholder="m@example.com"
+                                    value={email}
                                     onChange={(e) => {
-                                        setPassword(e.target.value);
+                                        setEmail(e.target.value);
                                         checkFormValidity();
                                     }}
-                                    placeholder='********'
                                     required
                                 />
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="focus:outline-none"
-                                    >
-                                        {showPassword ? <EyeOff className="w-5 h-5 text-gray-500" /> : <Eye className="w-5 h-5 text-gray-500" />}
-                                    </button>
-                                </div>
+                                {emailError && <i className="text-red-500 text-sm">{emailError}</i>}
                             </div>
-                            {passwordError && <i className="text-red-500 text-sm">{passwordError}</i>}
-                        </div>
-                        {!isLogin && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="confirmPassword" className='flex justify-between items-center text-lg font-semibold pl-1'>Confirm Password</Label>
+                            <div className="space-y-2">
+                                <Label htmlFor="password" className="flex justify-between items-center text-lg font-semibold pl-1">
+                                    Password
+                                    <div className="relative ml-1 group">
+                                        <Info className="w-4 h-4 text-gray-500" />
+                                        <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                            {validatePassword(password) ? 'Password is valid' : 'Password must be at least 8 characters long'}
+                                        </span>
+                                    </div>
+                                </Label>
+                                <div className="relative">
                                     <Input
-                                        id="confirmPassword"
-                                        type="password"
-                                        value={confirmPassword}
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
                                         onChange={(e) => {
-                                            setConfirmPassword(e.target.value);
+                                            setPassword(e.target.value);
                                             checkFormValidity();
                                         }}
                                         placeholder='********'
                                         required
                                     />
+                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="focus:outline-none"
+                                        >
+                                            {showPassword ? <EyeOff className="w-5 h-5 text-gray-500" /> : <Eye className="w-5 h-5 text-gray-500" />}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="fullname" className='flex justify-between items-center text-lg font-semibold pl-1'>Full Name</Label>
-                                    <Input
-                                        id="fullname"
-                                        type="text"
-                                        value={fullname}
-                                        onChange={(e) => setFullname(e.target.value)}
-                                        placeholder='John Doe'
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="role" className='flex justify-between items-center text-lg font-semibold pl-1'>
-                                        Role
-                                        <div className="relative ml-1 group">
-                                            <Info className="w-4 h-4 text-gray-500" />
-                                            <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                                                Select either 'admin' or 'user'
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <select
-                                        id="role"
-                                        value={role}
-                                        onChange={(e) => setRole(e.target.value)}
-                                        className="w-full p-2 border rounded"
-                                        required
-                                    >
-                                        <option value="user">User</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="username" className='flex justify-between items-center text-lg font-semibold pl-1'>
-                                        Username
-                                        <div className="relative ml-1 group">
-                                            <Info className="w-4 h-4 text-gray-500" />
-                                            <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                                                Username must be between 7 and 14 characters and can include letters and digits
-                                            </span>
-                                        </div>
-                                    </Label>
-                                    <Input
-                                        id="username"
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        placeholder='johndoe123'
-                                        required
-                                    />
-                                </div>
-                            </>
-                        )}
-                        {error && (
-                            <Alert variant="destructive">
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-                        <Button type="submit" className="w-full" disabled={!isFormValid || isLoading}>
-                            {isLoading ? <Spinner /> : (isLogin ? 'Login' : 'Sign Up')}
+                                {passwordError && <i className="text-red-500 text-sm">{passwordError}</i>}
+                            </div>
+                            {!isLogin && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="confirmPassword" className='flex justify-between items-center text-lg font-semibold pl-1'>Confirm Password</Label>
+                                        <Input
+                                            id="confirmPassword"
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => {
+                                                setConfirmPassword(e.target.value);
+                                                checkFormValidity();
+                                            }}
+                                            placeholder='********'
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fullname" className='flex justify-between items-center text-lg font-semibold pl-1'>Full Name</Label>
+                                        <Input
+                                            id="fullname"
+                                            type="text"
+                                            value={fullname}
+                                            onChange={(e) => setFullname(e.target.value)}
+                                            placeholder='John Doe'
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="role" className='flex justify-between items-center text-lg font-semibold pl-1'>
+                                            Role
+                                            <div className="relative ml-1 group">
+                                                <Info className="w-4 h-4 text-gray-500" />
+                                                <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                                    Select either 'admin' or 'user'
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <select
+                                            id="role"
+                                            value={role}
+                                            onChange={(e) => setRole(e.target.value)}
+                                            className="w-full p-2 border rounded"
+                                            required
+                                        >
+                                            <option value="user">User</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="username" className='flex justify-between items-center text-lg font-semibold pl-1'>
+                                            Username
+                                            <div className="relative ml-1 group">
+                                                <Info className="w-4 h-4 text-gray-500" />
+                                                <span className="absolute left-full ml-2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                                    Username must be between 7 and 14 characters and can include letters and digits
+                                                </span>
+                                            </div>
+                                        </Label>
+                                        <Input
+                                            id="username"
+                                            type="text"
+                                            value={username}
+                                            onChange={(e) => setUsername(e.target.value)}
+                                            placeholder='johndoe123'
+                                            required
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            {error && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
+                            <Button type="submit" className="w-full" disabled={!isFormValid || isLoading}>
+                                {isLoading ? <Spinner /> : (isLogin ? 'Login' : 'Sign Up')}
+                            </Button>
+                        </form>
+                    </CardContent>
+                    <CardFooter className='flex justify-center space-x-0 w-full'>
+                        {isLogin ? "Don't have an account? " : "Already have an account? "}
+                        <Button
+                            variant="link"
+                            className="inline"
+                            onClick={() => setIsLogin(!isLogin)}
+                        >
+                            <span className='font-semibold text-blue-700 text-medium hover:underline'>{isLogin ? "Sign Up" : "Login"}</span>
                         </Button>
-                    </form>
-                </CardContent>
-                <CardFooter className='flex justify-center space-x-0 w-full'>
-                    {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <Button
-                        variant="link"
-                        className="inline"
-                        onClick={() => setIsLogin(!isLogin)}
-                    >
-                        <span className='font-semibold text-blue-700 text-medium hover:underline'>{isLogin ? "Sign Up" : "Login"}</span>
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
+                    </CardFooter>
+                </Card>
+            </div>
+        </>
     );
 }
 

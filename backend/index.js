@@ -65,11 +65,11 @@ const corsOption = {
             callback(new Error("Cors Error origin not allowed."))
         }
     },
-    credential: true,
+    credentials: true,
     methods: ["GET", "POST", "DELETE", "PUT"],
-    headers: ['Content-Type', 'Authorization', 'x-unique-id', 'x-admin-token']
-}
-
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-unique-id', 'x-admin-token'],
+    exposedHeaders: ['Content-Type', 'Authorization', 'x-unique-id', 'x-admin-token']
+};
 
 app.use(cors(corsOption));
 app.use(express.json());

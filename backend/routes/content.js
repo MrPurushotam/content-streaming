@@ -9,9 +9,10 @@ const uploadThumbnail = require("../middleware/multer");
 const authorizeHeader = require("../middleware/authentication");
 const { uploadMessageToQueue } = require("../utils/Queue");
 const adminAuthorizer = require("../middleware/admin");
+const { commonStrictLimit } = require("../middleware/rateLimiting");
 
 router.use(authorizeHeader);
-router.use(adminAuthorizer)
+router.use(adminAuthorizer, commonStrictLimit);
 
 // route to create a presigned url and send to frontend. 
 router.get("/createurl", async (req, res) => {
@@ -60,7 +61,7 @@ router.post("/metadata", uploadThumbnail.fields([{ name: "thumbnail", maxCount: 
         console.log(thumbnailUrl);
         const uniqueIdExists = await prismaClient.content.findUnique({ where: { uniqueId } })
         if (uniqueIdExists) {
-            res.status(400).json({ error: "UniqueId already exists. You have already uploaded content. Please start from the beginning",message: "UniqueId already exists. You have already uploaded content. Please start from the beginning", success: false })
+            res.status(400).json({ error: "UniqueId already exists. You have already uploaded content. Please start from the beginning", message: "UniqueId already exists. You have already uploaded content. Please start from the beginning", success: false })
             return
         }
         const content = await prismaClient.Content.create({
@@ -93,10 +94,8 @@ router.post("/metadata", uploadThumbnail.fields([{ name: "thumbnail", maxCount: 
 })
 
 // route to confrim update and store it in queue
-// THOUGHT if we can verify whether an object with certain id is added in paticular location then it would be cherry on top
 router.post("/confirmsource", async (req, res) => {
     try {
-        // FIXME: For the timebeing i am taking contentId as a parameter from body which is a good way to do it but i am little unsure about how would it work in ui i can do this viva a prisma query too.
         const { uniqueId, uploaded, contentId } = req.body;
         console.log(req.body);
         if (!uniqueId || uploaded === undefined || !contentId) {

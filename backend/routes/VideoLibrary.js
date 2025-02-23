@@ -7,6 +7,7 @@ const { redisClient } = require("../utils/Queue");
 const adminAuthorizer = require("../middleware/admin");
 const router = require("express").Router();
 const path = require('path');
+const { generousLimit } = require("../middleware/rateLimiting");
 require("dotenv").config();
 
 // code to fetch videos and display in home page 
@@ -14,7 +15,7 @@ require("dotenv").config();
 // return all the video uploaded by user including details
 const cdn_url = process.env.CDN_BASE_URL;
 
-router.get("/", async (req, res) => {
+router.get("/", generousLimit, async (req, res) => {
     try {
         const content = await prismaClient.Content.findMany({
             where: {
@@ -51,7 +52,7 @@ router.get("/", async (req, res) => {
 })
 
 router.use(authorizeHeader);
-router.use(adminAuthorizer);
+router.use(adminAuthorizer, generousLimit);
 
 // delete video along with everything
 router.delete("/:id", async (req, res) => {
