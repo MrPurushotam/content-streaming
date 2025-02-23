@@ -9,6 +9,8 @@ import { adminUploadedContentAtom, userApproveListAtom, userAtom } from "@/store
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 import Spinner from "@/components/spinner";
+import Seo from '../components/seo/seo';
+import { ImageUp, X } from "lucide-react";
 
 // @ts-ignore
 let user: UserApprovalTypes = {
@@ -35,6 +37,7 @@ const Dashboard = () => {
   const [approveList, setApproveList] = useState<approveListType[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("mix");
   const [filterTime, setFilterTime] = useState<string>("newest");
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const user = useRecoilValue(userAtom);
 
   const fetchUploadedVideo = async () => {
@@ -67,7 +70,6 @@ const Dashboard = () => {
         toast({ title: "Error", description: resp.data.error });
       }
     } catch (error: any) {
-      console.error(error.message);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading("");
@@ -88,9 +90,8 @@ const Dashboard = () => {
 
   const updateApprovalStatus = async () => {
     setLoading("updatelist");
-    console.log("Approve List", approveList);
     try {
-      const resp = await api.post("/user/approve", { approveList });
+      const resp = await api.put("/user/approve", { approveList });
       if (resp.data.success) {
         toast({ title: "Success", description: "User statuses updated successfully." });
         fetchPendingUserList();
@@ -146,23 +147,38 @@ const Dashboard = () => {
         return new Date(a.uploadTime).getTime() - new Date(b.uploadTime).getTime();
       }
     });
-    console.log(user)
+
   return (
-    <div className="w-full h-[93vh] flex flex-col items-center p-4">
+    <div className="w-full min-h-svh flex flex-col items-center p-4 sm:p-6 md:p-8 bg-gray-50">
+      <Seo
+        title="Dashboard"
+        description="Admin dashboard for managing videos and user approvals."
+        keywords="dashboard, admin, videos, user approvals"
+        name="Stream by Purushotam"
+        type="website"
+        address={'/dashboard'}
+      />
       {loading === "all" ? (
         <Spinner />
       ) : (
         <>
-          <h2 className="font-bold text-2xl my-7">Hello Admin - {user?.username}</h2>
+          <h2 className="font-bold text-lg sm:text-xl md:text-2xl lg:text-3xl my-4 sm:my-7">Hello Admin - {user?.username}</h2>
           <div className="grid w-full h-full rounded-lg p-2">
-            <div className="grid grid-cols-[2fr_1fr] gap-4 h-[80vh]">
-              <div className="col-span-1 overflow-auto bg-gray-200 flex flex-col items-center px-2 py-3">
-                <div className="w-full flex justify-between items-center">
-                  <Button onClick={() => navigate("/upload")} className="bg-green-300 hover:bg-green-400 shadow-md font-bold text-black">Upload Video</Button>
-                  <h2 className="text-2xl font-bold my-3">Your Videos</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 h-[80vh]">
+              <div className="col-span-1 overflow-auto bg-gray-200 flex flex-col items-center px-2 py-3 rounded-lg shadow-md">
+                <div className="w-full flex flex-row justify-between items-center mb-4">
+
+                  <Button onClick={() => navigate("/upload")} className="flex gap-1 md:hidden bg-green-300 hover:bg-green-400 shadow-md font-bold text-black mb-2 sm:mb-0 text-sm sm:text-sm md:text-base lg:text-lg">
+                    <ImageUp className="w-12 h-12 " />
+                    <span className="hidden sm:inline">Upload</span>
+                  </Button>
+
+                  <Button onClick={() => navigate("/upload")} className="hidden md:inline bg-green-300 hover:bg-green-400 shadow-md font-bold text-black mb-2 sm:mb-0 text-sm sm:text-sm md:text-base lg:text-lg">Upload Video</Button>
+
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold my-3">Your Videos</h2>
                   <div className="flex gap-2">
                     <Select onValueChange={(value) => setFilterTime(value)}>
-                      <SelectTrigger className="w-[150px] bg-white">
+                      <SelectTrigger className="w-[40px] md:w-[120px] bg-white flex justify-center items-center">
                         <SelectValue placeholder="Filter by Time" />
                       </SelectTrigger>
                       <SelectContent>
@@ -170,9 +186,10 @@ const Dashboard = () => {
                         <SelectItem value="oldest">Oldest</SelectItem>
                       </SelectContent>
                     </Select>
+
                     <Select onValueChange={(value) => setFilterStatus(value)}>
-                      <SelectTrigger className="w-[150px] bg-white">
-                        <SelectValue placeholder="Filter by Status" />
+                      <SelectTrigger className="w-[40px] md:w-[120px] bg-white flex justify-center items-center">
+                        <SelectValue placeholder="Filter by Status"/>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
@@ -206,8 +223,8 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="col-span-1 overflow-auto bg-gray-200 flex flex-col items-center px-2 py-3">
-                <h2 className="text-2xl font-bold my-3">Approve New Admin</h2>
+              <div className="hidden lg:flex col-span-1 flex-col items-center px-2 py-3 bg-gray-200 rounded-md">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold my-3">Approve New Admin</h2>
                 <div className="font w-full flex-1 overflow-y-auto overflow-x-hidden p-2 rounded-md space-y-1">
                   {loading === "list" || loading === "updatelist" && (
                     <div className="w-full flex justify-center items-center">
@@ -226,7 +243,7 @@ const Dashboard = () => {
                   )}
                 </div>
                 <Button
-                  className="w-full shadow-md shadow-sky-100 bg-sky-400 my-2 text-lg font-bold tracking-wide uppercase hover:bg-sky-500"
+                  className="w-full shadow-md shadow-sky-100 bg-sky-400 my-2 text-sm sm:text-base md:text-lg font-bold tracking-wide uppercase hover:bg-sky-500"
                   onClick={updateApprovalStatus}
                   disabled={approveList?.length < 1 || loading === "updatelist"}
                 >
@@ -237,6 +254,54 @@ const Dashboard = () => {
           </div>
         </>
       )}
+
+      {/* Right Side Drawer */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 flex items-end justify-end z-50">
+          <div className="bg-white w-full sm:w-3/4 md:w-1/2 lg:w-1/3 h-full shadow-lg p-4 sm:p-6 md:p-8 overflow-auto flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Approve New Admin</h2>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={() => setIsDrawerOpen(false)}>
+                <X size={18} />
+              </Button>
+            </div>
+            <div className="font w-full flex-1 overflow-y-auto overflow-x-hidden p-2 rounded-md space-y-1 mt-7">
+              {loading === "list" || loading === "updatelist" && (
+                <div className="w-full flex justify-center items-center">
+                  <Spinner />
+                </div>
+              )}
+              {pendingUser?.map((user: UserApprovalTypes) => {
+                return (
+                  <UserApproval key={user.id} user={user} onApprovalChange={handleApprovalChange} />
+                )
+              })}
+              {pendingUser.length === 0 && (
+                <div className="w-full p-2 flex justify-center items-center">
+                  <span className="text-amber-700 text-sm font-bold tracking-wide capitalize">No user request pending.</span>
+                </div>
+              )}
+            </div>
+            <Button
+              className="w-full shadow-md shadow-sky-100 bg-sky-400 my-2 text-sm sm:text-base md:text-lg font-bold tracking-wide uppercase hover:bg-sky-500"
+              onClick={updateApprovalStatus}
+              disabled={approveList?.length < 1 || loading === "updatelist"}
+            >
+              {loading === "updatelist" ? "Updating..." : "Update"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Button for small screens */}
+      <div className="lg:hidden fixed bottom-4 right-8">
+        <Button
+          className="shadow-md shadow-sky-100 bg-sky-400 text-xs md:text-sm font-semibold md:font-bold tracking-wide uppercase hover:bg-sky-500"
+          onClick={() => setIsDrawerOpen(true)}
+        >
+          Approve New Admin
+        </Button>
+      </div>
     </div>
   );
 };
