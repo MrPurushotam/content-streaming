@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <CustomSidebar /> {/* Add CustomSidebar */}
                 <div className="flex flex-col flex-grow">
                     <Appbar />
-                    <main className="flex-1 pt-16 pl-16">{children}</main> {/* Add top padding */}
+                    <main className="flex-1 pt-16 px-3 md:px-0 md:pl-16">{children}</main> {/* Add top padding */}
                 </div>
             </div>
         </div>

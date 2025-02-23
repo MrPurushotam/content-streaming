@@ -12,8 +12,8 @@ const Appbar = () => {
     return (
         <div className="fixed top-0 left-0 right-0 flex items-center justify-between p-4 bg-gray-100 text-black dark:bg-gray-900 dark:text-white w-full shadow-md z-10">
             {/* Brand Name */}
-            <div></div>
-            <h1 className="text-2xl font-bold tracking-wider text-sky-400 cursor-pointer uppercase flex items-center gap-1" onClick={()=>navigate("/")}>
+            <div className="hidden md:inline"></div>
+            <h1 className="pl-12 md:pl-0 text-2xl font-bold tracking-wider text-sky-400 cursor-pointer uppercase flex items-center gap-1" onClick={()=>navigate("/")}>
                 <img src="/favicon.ico" alt="Stream" className="h-10 w-10 cursor-pointer"/>
                 Stream
             </h1>
