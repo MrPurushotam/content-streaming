@@ -110,7 +110,7 @@ const EditVideo = () => {
     return (
         <>
             <Seo
-                title="Edit"
+                title="Edit content"
                 description="Edit video page to edit respective video details for better access and content."
                 keywords="update, edit, video,edit video, content, stream, stream by purushotam, purushotam"
                 name="Stream by Purushotam"
