@@ -7,28 +7,34 @@ interface HLSPlayerProps {
     src: string;
     poster?: string;
     options?: VideoJsPlayerOptions;
+    onPlay?: () => void; // Add onPlay prop
 }
 
-const HLSPlayer: React.FC<HLSPlayerProps> = ({ src, options = {}, poster }) => {
+const HLSPlayer: React.FC<HLSPlayerProps> = ({ src, options = {}, poster, onPlay }) => {
     const videoRef: MutableRefObject<HTMLVideoElement | null> = useRef(null);
     const playerRef: MutableRefObject<VideoJsPlayer | null> = useRef(null);
     const [isMounted, setIsMounted] = useState(false);
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
-    useEffect(() => {
 
+    useEffect(() => {
         if (!isMounted || !videoRef.current || playerRef.current) return;
 
         playerRef.current = videojs(videoRef.current, {
             ...options,
             controls: true,
-            autoplay: false,
+            autoplay: true,
             responsive: true,
             fluid: true,
             poster,
             sources: [{ src, type: "application/x-mpegURL" }],
         });
+
+        if (onPlay) {
+            playerRef.current.on('play', onPlay);
+        }
 
         return () => {
             if (playerRef.current) {
@@ -36,8 +42,7 @@ const HLSPlayer: React.FC<HLSPlayerProps> = ({ src, options = {}, poster }) => {
                 playerRef.current = null;
             }
         };
-    }, [src, options, isMounted, poster]);
-
+    }, [src, options, isMounted, poster, onPlay]);
 
     return (
         <div>

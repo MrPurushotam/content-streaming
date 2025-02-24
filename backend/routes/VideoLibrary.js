@@ -51,6 +51,54 @@ router.get("/", generousLimit, async (req, res) => {
     }
 })
 
+router.get("/:id?", async (req, res) => {
+    try {
+        const { id } = req.params
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Provide id of video." });
+        }
+        const content = await prismaClient.Content.findUnique({
+            where: { id: parseInt(id, 10) },
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                thumbnail: true,
+                views: true,
+                uploadTime: true,
+                manifestUrl: true
+            }
+        });
+        content.thumbnail = content.thumbnail ? path.join(cdn_url, content.thumbnail) : ""
+        content.manifestUrl = content.manifestUrl ? path.join(cdn_url, content.manifestUrl) : ""
+        res.status(200).json({ content, success: true, message: "Fetched content with id " + id })
+    } catch (error) {
+        console.log("Error while fetching content.", error);
+        return res.status(500).json({ success: false, message: "Internal Error occured." });
+    }
+})
+
+router.put("/view/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            req.status(400).json({ success: false, message: "Provide id of video." });
+        }
+        const content = await prismaClient.Content.update({
+            where: { id: parseInt(id, 10) },
+            data: {
+                views: {
+                    increment: 1
+                }
+            }
+        });
+        return res.status(200).json({ success: true, message: "Updated views." });
+    } catch (error) {
+        console.log("Error while updating views.", error);
+        return res.status(500).json({ success: false, message: "Internal Error occured." });
+    }
+})
+
 router.use(authorizeHeader);
 router.use(adminAuthorizer, generousLimit);
 

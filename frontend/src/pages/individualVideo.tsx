@@ -1,12 +1,50 @@
 import HLSPlayer from "@/components/VIdeoPlayer";
 import { currentWatchingVideoAtom } from "@/store/atoms";
 import { useParams } from "react-router-dom";
-import { useRecoilValue } from "recoil";
+import { useRecoilState } from "recoil";
 import Seo from '../components/seo/seo';
+import { useEffect, useRef } from "react";
+import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const IndividualVideo = () => {
     const { id } = useParams();
-    const content = useRecoilValue(currentWatchingVideoAtom);
+    const [content, setContent] = useRecoilState(currentWatchingVideoAtom);
+    const { toast } = useToast();
+    const viewCountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        const fetchContent = async () => {
+            try {
+                const resp = await api.get(`/video/${id}`);
+                if (resp.data.success) {
+                    setContent(resp.data.content);
+                    toast({ title: "Fetched content.", description: "Content fetched successfully." });
+                }
+            } catch (error: any) {
+                console.log("Error fetching content: ", error);
+                toast({ title: "Error fetching content.", description: error.message, variant: "destructive" });
+            }
+        };
+
+        if (!content && id) {
+            fetchContent();
+        }
+    }, [id, content, setContent, toast]);
+
+    const handleVideoPlay = () => {
+        if (viewCountTimeoutRef.current) {
+            clearTimeout(viewCountTimeoutRef.current);
+        }
+        viewCountTimeoutRef.current = setTimeout(async () => {
+            try {
+                await api.put(`/video/view/${id}`);
+            } catch (error: any) {
+                console.log("Error updating view count: ", error);
+                toast({ title: "Error updating view count.", description: error.message, variant: "destructive" });
+            }
+        }, 5000);
+    };
 
     return (
         <>
@@ -19,12 +57,13 @@ const IndividualVideo = () => {
                 address={`/watch/${id}`}
             />
             <div className="w-full min-h-screen flex flex-col items-center gap-4 p-4 bg-gray-100">
-                {/* Video Player */}
                 <div className="w-full max-w-6xl aspect-video bg-gradient-to-r from-[#232526] to-[#414345] rounded-lg overflow-hidden shadow-lg">
                     <HLSPlayer
+                        key={content?.id}
                         src={content?.manifestUrl || ""}
-                        options={{ fullscreen: true, playbackRates: [0.5, 1, 1.5, 2], muted: false }}
                         poster={content?.thumbnail}
+                        options={{ fullscreen: true, playbackRates: [0.5, 1, 1.5, 2], muted: false }}
+                        onPlay={handleVideoPlay} // Add onPlay event handler
                     />
                 </div>
 
