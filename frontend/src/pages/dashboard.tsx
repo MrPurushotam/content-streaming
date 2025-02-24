@@ -149,7 +149,7 @@ const Dashboard = () => {
     });
 
   return (
-    <div className="w-full min-h-svh flex flex-col items-center p-4 sm:p-6 md:p-8 bg-gray-50">
+    <div className="w-full min-h-svh flex flex-col items-center bg-gray-50 ">
       <Seo
         title="Dashboard"
         description="Admin dashboard for managing videos and user approvals."
@@ -162,7 +162,7 @@ const Dashboard = () => {
         <Spinner />
       ) : (
         <>
-          <h2 className="font-bold text-lg sm:text-xl md:text-2xl lg:text-3xl my-4 sm:my-7">Hello Admin - {user?.username}</h2>
+          <h2 className="font-bold text-lg sm:text-xl md:text-2xl lg:text-3xl pt-7 pb-3">Hello Admin - {user?.username}</h2>
           <div className="grid w-full h-full rounded-lg p-2">
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 h-[80vh]">
               <div className="col-span-1 overflow-auto bg-gray-200 flex flex-col items-center px-2 py-3 rounded-lg shadow-md">
@@ -189,7 +189,7 @@ const Dashboard = () => {
 
                     <Select onValueChange={(value) => setFilterStatus(value)}>
                       <SelectTrigger className="w-[40px] md:w-[120px] bg-white flex justify-center items-center">
-                        <SelectValue placeholder="Filter by Status"/>
+                        <SelectValue placeholder="Filter by Status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
