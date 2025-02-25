@@ -56,8 +56,7 @@ router.post("/metadata", uploadThumbnail.fields([{ name: "thumbnail", maxCount: 
         if (!title || !description || !uniqueId) {
             return res.status(400).json({ error: 'Missing required fields in request body.', success: false });
         }
-
-        const thumbnailUrl = req.files?.length > 0 ? req.files.thumbnail[0].key : "";
+        const thumbnailUrl = req.files?.thumbnail?.[0]?.key || "";
         console.log(thumbnailUrl);
         const uniqueIdExists = await prismaClient.content.findUnique({ where: { uniqueId } })
         if (uniqueIdExists) {
@@ -84,7 +83,7 @@ router.post("/metadata", uploadThumbnail.fields([{ name: "thumbnail", maxCount: 
                 public: true,
                 uploadTime: true
             }
-        })
+        });
 
         res.status(201).json({ content, success: true, message: "Updated metadata successfully. Upload video to bucket." });
     } catch (error) {
