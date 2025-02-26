@@ -4,9 +4,9 @@
   "description": "A fully functional backend for livestreaming web where user can stream there video, upload video thereby users in the platfom can stream efficent/optimised video despite of there network this will happen using fmpeg library ",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "webpack --mode production"
   },
   "author": "Purushotam",
   "license": "ISC",
