@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "build": "npm run prisma:migrate && webpack --mode production",
+    "build": "npm run prisma:migrate && webpack --mode production --entry ./index.js",
     "prisma:migrate": "npx prisma migrate deploy && npx prisma generate",
     "prisma:sync": "npx prisma db pull && npx prisma generate"
   },
