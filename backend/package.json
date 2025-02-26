@@ -7,7 +7,7 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "build": "npm run prisma:migrate && webpack --mode production",
-    "prisma:migrate": "npx prisma db pull && npx prisma generate && npx prisma migrate dev --name init",
+    "prisma:migrate": "npx prisma migrate deploy && npx prisma generate",
     "prisma:sync": "npx prisma db pull && npx prisma generate"
   },
   "author": "Purushotam",
