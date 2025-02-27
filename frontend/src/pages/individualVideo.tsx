@@ -68,11 +68,11 @@ const IndividualVideo = () => {
                     {loading ? (
                         <Spinner />
                     ) : (
-                        content?.manifestUrl && (
+                        content?.manifestUrl && contentRef.current && (
                             <HLSPlayer
-                                key={content?.manifestUrl}
-                                src={contentRef.current?.manifestUrl}
-                                poster={content?.thumbnail}
+                                key={content.manifestUrl}
+                                src={contentRef.current.manifestUrl || ""}
+                                poster={content.thumbnail}
                                 options={{ fullscreen: true, playbackRates: [0.5, 1, 1.5, 2], muted: false }}
                                 onPlay={handleVideoPlay}
                             />)

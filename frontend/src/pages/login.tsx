@@ -10,7 +10,6 @@ import { useRecoilRefresher_UNSTABLE, useSetRecoilState } from 'recoil';
 import { fetchUserDetailsSelector } from '@/store/selectors';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import useLoggedinUser from '@/hooks/custom-hooks/useLoggedinUser';
 import Spinner from '@/components/spinner';
 import { isAdminAtom, isLoggedInAtom, userAtom } from '@/store/atoms';
 import Seo from "@/components/seo/seo";
@@ -90,7 +89,6 @@ export default function AuthPage() {
                 password,
                 ...(isLogin ? {} : { fullname, role, username })
             }))
-            console.log(response.data);
             if (!response.data.success) {
                 setError(response.data.error);
                 setIsLoading(false); // Set loading state to false

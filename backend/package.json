@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "npm run prisma:migrate && node index.js",
-    "prisma:migrate": "npx prisma migrate deploy && npx prisma generate",
+    "build":"npx prisma generate",
+    "start": "node index.js",
+    "postinstall": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate deploy",
     "prisma:sync": "npx prisma db pull && npx prisma generate"
   },
   "author": "Purushotam",

@@ -36,7 +36,8 @@ const UploadContent = () => {
   const [popupMessage, setPopupMessage] = useState<string | null>(null);
 
   const [uniqueId, setUniqueId] = useState<string>("");
-  const [contentId, setContentId] = useState<string>("");
+  // @ts-ignore
+  const [_, setContentId] = useState<string>("");
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const uniqueIdRef = useRef<string>("");
   const contentIdRef = useRef<number>(0);

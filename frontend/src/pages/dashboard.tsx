@@ -1,5 +1,5 @@
 import UploadedVideoList from "../components/home/UploadedVideoList";
-import UserApproval, { UserApprovalTypes } from "../components/dashboard/userApproval";
+import UserApproval from "../components/dashboard/userApproval";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
@@ -12,17 +12,6 @@ import Spinner from "@/components/spinner";
 import Seo from '../components/seo/seo';
 import { ImageUp, X } from "lucide-react";
 
-// @ts-ignore
-let user: UserApprovalTypes = {
-  id: 1,
-  username: "fdsf",
-  email: "Sdfsdf",
-  role: "admin",
-  approved: false,
-  createdAt: Date(),
-  fullname: "sdf dfs"
-};
-
 interface approveListType {
   id: number;
   status: boolean;
@@ -31,7 +20,7 @@ interface approveListType {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [pendingUser, setPendingUser] = useRecoilState<UserApprovalTypes[]>(userApproveListAtom);
+  const [pendingUser, setPendingUser] = useRecoilState(userApproveListAtom);
   const [uploadedVideo, setUploadedVideo] = useRecoilState(adminUploadedContentAtom);
   const [loading, setLoading] = useState<string>("all");
   const [approveList, setApproveList] = useState<approveListType[]>([]);
@@ -39,7 +28,7 @@ const Dashboard = () => {
   const [filterTime, setFilterTime] = useState<string>("newest");
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const user = useRecoilValue(userAtom);
-
+  const logout = useLogout();
   const fetchUploadedVideo = async () => {
     setLoading("video");
     try {
@@ -105,6 +94,24 @@ const Dashboard = () => {
       setLoading("");
     }
   };
+
+  useEffect(() => {
+    const checkJwtError = async () => {
+      try {
+        const resp = await api.get("/user/");
+        if (!resp.data.success) {
+          logout("Some error occured.");
+        }
+      } catch (error: any) {
+        if (error.response && error.response.data && error.response.data.jwtError) {
+          logout("Jwt token expired/not foudn. Please login again.");
+        } else {
+          console.error("Error occurred", error.message);
+        }
+      }
+    };
+    checkJwtError();
+  }, [logout]);
 
   useEffect(() => {
     setLoading("all");
@@ -212,7 +219,6 @@ const Dashboard = () => {
                     </div>
                   )}
                   {filteredVideos?.map((video) => (
-                    // @ts-ignore
                     <UploadedVideoList key={video.id} video={video}
                       onClick={() => {
                         if (video.status === "deleted") return;
@@ -231,8 +237,9 @@ const Dashboard = () => {
                       <Spinner />
                     </div>
                   )}
-                  {pendingUser?.map((user: UserApprovalTypes) => {
+                  {pendingUser?.map((user) => {
                     return (
+                      // @ts-ignore
                       <UserApproval key={user.id} user={user} onApprovalChange={handleApprovalChange} />
                     )
                   })}
@@ -271,8 +278,9 @@ const Dashboard = () => {
                   <Spinner />
                 </div>
               )}
-              {pendingUser?.map((user: UserApprovalTypes) => {
+              {pendingUser?.map((user) => {
                 return (
+                  // @ts-ignore
                   <UserApproval key={user.id} user={user} onApprovalChange={handleApprovalChange} />
                 )
               })}

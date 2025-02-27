@@ -3,7 +3,7 @@ import { Menu, Eye, Info, History, Upload, LogIn, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { SidebarFooter, SidebarGroupContent } from "./ui/sidebar";
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { isAdminAtom, isLoggedInAtom, sidebarToggleAtom } from "@/store/atoms";

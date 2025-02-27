@@ -2,7 +2,7 @@ import api from '@/lib/api';
 import { adminUploadedContentAtom, editContentAtom, isAdminAtom, isLoggedInAtom, userApproveListAtom, userAtom } from '@/store/atoms';
 import { fetchUserDetailsSelector } from '@/store/selectors';
 import { useCallback } from 'react';
-import { useRecoilRefresher_UNSTABLE, useResetRecoilState, useSetRecoilState } from 'recoil';
+import { useRecoilRefresher_UNSTABLE, useResetRecoilState } from 'recoil';
 import { useToast } from '../use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,33 +15,30 @@ const useLogout = () => {
     const resetAdminUploadedContent = useResetRecoilState(adminUploadedContentAtom);
     const resetAdminEditContent = useResetRecoilState(editContentAtom);
     const resetFetchUserDetail = useRecoilRefresher_UNSTABLE(fetchUserDetailsSelector)
-    const navigate=useNavigate();
+    const navigate = useNavigate();
 
-    const logout = useCallback(async () => {
+    const logout = useCallback(async (customMessage?: string) => {
         try {
-            const resp = await api.get("/user/logout")
-            if (resp.data.success) {
-                resetLoggedIn();
-                resetUser();
-                resetIsAdmin();
-                resetUseApprovalList();
-                resetAdminEditContent();
-                resetAdminUploadedContent();
-                resetFetchUserDetail();
-                window.localStorage.removeItem("token");
-                window.localStorage.removeItem("adminToken");
-                navigate("/")
-                toast({ title: "Logged out.", description: "You are logged out." })
-            } else {
-                toast({ title: "Couldn't Log out.", description: resp.data.message })
-            }
+            await api.get("/user/logout")
+            resetLoggedIn();
+            resetUser();
+            resetIsAdmin();
+            resetUseApprovalList();
+            resetAdminEditContent();
+            resetAdminUploadedContent();
+            resetFetchUserDetail();
+            navigate("/")
         } catch (error: any) {
-            console.log("Unfortunate error occured.", error.message)
+            console.log("Unfortunate error occurred.", error.message)
             toast({ title: "Error while logging out.", description: error.message, variant: "destructive" })
+        } finally {
+            window.localStorage.removeItem("token");
+            window.localStorage.removeItem("adminToken");
+            toast({ title: "Logged out.", description: customMessage || "You are logged out." })
         }
-    }, [resetAdminEditContent, resetAdminUploadedContent, resetFetchUserDetail, resetIsAdmin, resetLoggedIn, resetUseApprovalList, resetUser, toast,navigate])
+    }, [resetAdminEditContent, resetAdminUploadedContent, resetFetchUserDetail, resetIsAdmin, resetLoggedIn, resetUseApprovalList, resetUser, toast, navigate])
 
     return logout;
 }
 
-export default useLogout
+export default useLogout;

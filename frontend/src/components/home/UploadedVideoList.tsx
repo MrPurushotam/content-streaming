@@ -12,19 +12,19 @@ export interface UploadedVideoListType {
   public: boolean;
   status: string;
   manifestUrl: string;
-  uploadTime: string;
+  uploadTime: Date;
   updatedAt?: Date;
   uniqueId?: string;
 }
 
 interface UploadedVideoListProps {
   video: UploadedVideoListType;
-  onClick: (id: string) => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onClick: (id: number) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
 }
 
-const UploadedVideoList: React.FC<UploadedVideoListProps | null> = ({ video, onClick, onEdit, onDelete }) => {
+const UploadedVideoList: React.FC<UploadedVideoListProps> = ({ video, onClick, onEdit, onDelete }) => {
   return (
     <div
       className={`w-full p-1 rounded-md shadow-md flex flex-row gap-2 hover:shadow-lg ${video?.status !== "deleted" ? "hover:shadow-sky-200" : "hover:shadow-red-200"} transition-shadow duration-300`}>
@@ -39,7 +39,7 @@ const UploadedVideoList: React.FC<UploadedVideoListProps | null> = ({ video, onC
           <span className="flex-1 text-lg font-semibold tracking-wide">{video?.title || "fjs sdkjfsd ksdjf"}</span>
           <div className="flex gap-2 px-3 py-1 items-center">
 
-            <Button onClick={() => onClick(video.id)} variant={"link"} asChild className="p-1 rounded-md w-7 h-7" disabled={video?.status === "deleted" && !video?.manifestUrl.trim()}>
+            <Button onClick={() => onClick(video?.id)} variant={"link"} asChild className="p-1 rounded-md w-7 h-7" disabled={video?.status === "deleted" && !video?.manifestUrl.trim()}>
               <SquareArrowOutUpRight />
             </Button>
 
@@ -50,8 +50,8 @@ const UploadedVideoList: React.FC<UploadedVideoListProps | null> = ({ video, onC
               <DropdownMenuContent>
                 <DropdownMenuLabel>Settings</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onEdit(video.id)} disabled={video.status === "deleted"} >Edit</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete(video.id)} disabled={video.status === "deleted"} >Delete</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(video?.id)} disabled={video.status === "deleted"} >Edit</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDelete(video?.id)} disabled={video.status === "deleted"} >Delete</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
