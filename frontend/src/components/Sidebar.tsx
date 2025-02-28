@@ -86,15 +86,22 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={isLoggedIn ? logout : () => navigate("/login")}
+          onClick={() => {
+            if (isLoggedIn) {
+              logout()
+            } else {
+              navigate("/login")
+            }
+          }}
           className="w-full h-full flex justify-start items-center hover:bg-gray-300 dark:hover:bg-gray-800"
         >
           <div className="flex justify-center items-center h-full p-1">
-            {isLoggedIn ? (
-              <LogOut className="text-red-500 font-bold text-2xl" />
-            ) : (
-              <LogIn />
-            )}
+            {
+              isLoggedIn ? (
+                <LogOut className="text-red-500 font-bold text-2xl" />
+              ) : (
+                <LogIn />
+              )}
           </div>
           {isSidebarOpen && <span className={`text-lg font-semibold tracking-wide ml-3 ${isLoggedIn ? "text-red-500" : "text-cyan-500"}`}>{isLoggedIn ? "Logout" : "Login"}</span>}
         </Button>
