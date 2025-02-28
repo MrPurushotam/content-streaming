@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import Spinner from "@/components/spinner";
 import Seo from '../components/seo/seo';
 import { ImageUp, X } from "lucide-react";
+import useLogout from "@/hooks/custom-hooks/useLogout";
 
 interface approveListType {
   id: number;

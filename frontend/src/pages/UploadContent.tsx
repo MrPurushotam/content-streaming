@@ -2,7 +2,7 @@ import { useState, ChangeEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Tegjtxtarea } from "@/components/ui/textarea";
 import { X } from "lucide-react";
 import api, { setHeader } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +37,7 @@ const UploadContent = () => {
 
   const [uniqueId, setUniqueId] = useState<string>("");
   // @ts-ignore
-  const [_, setContentId] = useState<string>("");
+  // const [contentId, setContentId] = useState<string>("");
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const uniqueIdRef = useRef<string>("");
   const contentIdRef = useRef<number>(0);
@@ -101,7 +101,7 @@ const UploadContent = () => {
         console.log(resp.data);
         // setMetadata(resp.data.content);
         contentIdRef.current = resp.data.content?.id
-        setContentId(resp.data.content?.id);
+        // setContentId(resp.data.content?.id);
         return;
       }
       throw new Error("Couldn't upload content.");
