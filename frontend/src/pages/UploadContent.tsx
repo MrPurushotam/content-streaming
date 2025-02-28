@@ -2,7 +2,7 @@ import { useState, ChangeEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Tegjtxtarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import { X } from "lucide-react";
 import api, { setHeader } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -36,7 +36,6 @@ const UploadContent = () => {
   const [popupMessage, setPopupMessage] = useState<string | null>(null);
 
   const [uniqueId, setUniqueId] = useState<string>("");
-  // @ts-ignore
   // const [contentId, setContentId] = useState<string>("");
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const uniqueIdRef = useRef<string>("");
@@ -233,7 +232,7 @@ const UploadContent = () => {
           {/* Description */}
           <div>
             <label className="block text-lg font-semibold text-gray-700 mb-1">Description</label>
-            <Textarea value={description} disabled={loading.length > 0} onChange={(e) => setDescription(e.target.value)} maxLength={5000} placeholder="Enter video description (max 5000 words)" className="w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-400" />
+            <Textarea value={description} disabled={loading.length > 0} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} maxLength={5000} placeholder="Enter video description (max 5000 words)" className="w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-400" />
           </div>
 
           {/* Video Upload */}
