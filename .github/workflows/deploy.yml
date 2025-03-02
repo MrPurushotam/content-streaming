@@ -1,0 +1,37 @@
+name: Deploy Lambda Function
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install --omit=dev  # Install production dependencies only
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Zip the Lambda package
+        run: |
+          cd backend
+          zip -r ../lambda.zip . -x "node_modules/aws-sdk/*" "node_modules/.bin/*" ".git/*" ".github/*" "tests/*" "*.md"  # Exclude unnecessary files
+
+      - name: Deploy to AWS Lambda
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          function-name: stream-server
+          zip-file: lambda.zip
