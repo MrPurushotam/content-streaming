@@ -141,7 +141,7 @@ async function runWorker(data) {
   const { videoUrl, uniqueId, contentId, userId } = data;
   const primaryBucket = process.env.AWS_S3_PRIMARYBUCKET_NAME;
   const secondaryBucket = process.env.AWS_S3_SECONDARYBUCKET_NAME;
-  const tempDir = path.join(__dirname, 'temp', uniqueId);
+  const tempDir = path.join(__dirname, 'tep', uniqueId);
   const inputPath = path.join(tempDir, path.basename(videoUrl));
   const outputDir = path.join(tempDir, 'output');
   
