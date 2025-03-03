@@ -3,35 +3,63 @@ name: Deploy Lambda Function
 on:
   push:
     branches:
-      - main  
+      - main
+    paths:
+      - "backend/**"
 
 jobs:
   deploy:
+    name: deploy to lambda
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ./backend
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/package-lock.json"
+
       - name: Install dependencies
+        run: npm install
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Create deployment package
         run: |
-          cd backend
-          npm install --omit=dev  # Install production dependencies only
+          # Create a clean lambda package directory
+          mkdir -p lambda-package
+
+          # Copy all files and directories except node_modules and unnecessary files
+          find . -type f -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
+
+          # Install only production dependencies in the package
+          cd lambda-package
+          npm install --omit=dev
+
+          # Zip the final package
+          zip -r ../../function.zip .
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Zip the Lambda package
+      - name: Deploy to Lambda
         run: |
-          cd backend
-          zip -r ../lambda.zip . -x "node_modules/aws-sdk/*" "node_modules/.bin/*" ".git/*" ".github/*" "tests/*" "*.md"  # Exclude unnecessary files
-
-      - name: Deploy to AWS Lambda
-        uses: aws-actions/aws-lambda-deploy@v1
-        with:
-          function-name: stream-server
-          zip-file: lambda.zip
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://function.zip
