@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "backend/**"
-
+  workflow_dispatch:
 jobs:
   deploy:
     name: deploy to lambda
@@ -50,7 +50,7 @@ jobs:
 
           # Zip the final package
           zip -r ../../function.zip .
-          
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -62,4 +62,5 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-            --zip-file fileb://../../function.zip
+            --zip-file fileb://function.zip
+
