@@ -30,12 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Prisma migrations
-        run: npx prisma migrate deploy
-
-      - name: Generate Prisma Client
-        run: npx prisma generate
-
       - name: Create deployment package
         run: |
           # Create a clean lambda package directory
