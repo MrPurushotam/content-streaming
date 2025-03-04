@@ -35,7 +35,7 @@ jobs:
           mkdir -p lambda-package
           find . -type f -not -path "./node_modules/*" -not -path "./git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
           cd lambda-package
-          zip -r ../function.zip . # Create zip in root of repo.
+          zip -r ../function.zip . 
 
 
       - name: Configure AWS credentials
@@ -47,8 +47,6 @@ jobs:
 
       - name: Deploy to Lambda
         run: |
-          pwd
-          ls -l
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://function.zip
