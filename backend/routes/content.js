@@ -27,7 +27,7 @@ router.get("/createurl", async (req, res) => {
             ContentType: "video/*"
         });
 
-        const presignedUrl = await getSignedUrl(S3, command, { expiresIn: 3 * 3600, region: process.env.AWS_REGION });
+        const presignedUrl = await getSignedUrl(S3, command, { expiresIn: 3 * 3600});
 
         const videoSourceInfo = await prismaClient.VideoSourceInfo.create({
             data: {
