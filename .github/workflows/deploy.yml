@@ -61,4 +61,4 @@ jobs:
             ls -l
             aws lambda update-function-code \
               --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-              --zip-file fileb://../function.zip
+              --zip-file fileb://${{ github.workspace }}/function.zip
