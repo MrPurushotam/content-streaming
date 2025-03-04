@@ -5,11 +5,13 @@ const ContentRouter = require("./routes/content")
 const VideoRouter = require("./routes/VideoLibrary")
 const CheckVariousService = require("./routes/checkVariousService")
 const cors = require("cors");
-const { disconnectRedis, redisClient } = require("./utils/Queue");
+const { disconnectRedis } = require("./utils/Queue");
 const { Worker } = require("worker_threads");
 const { connectToRedis } = require("./utils/Queue");
+const serverless = require("serverless-http")
 
-const port = process.env.PORT || 4000;
+
+// const port = process.env.PORT || 4000;
 require("dotenv").config();
 let PrimaryWorker;
 
@@ -74,11 +76,11 @@ const corsOption = {
 app.use(cors(corsOption));
 app.use(express.json());
 
-app.get("/", (req, res) => {
+app.get("/status", (req, res) => {
     res.json({ message: "Api is running." });
 })
 
-app.use("/api/v1/check",CheckVariousService)
+app.use("/api/v1/check", CheckVariousService)
 
 app.use("/api/v1/user", UserRouter);
 // for uploading content to s3
@@ -86,6 +88,8 @@ app.use("/api/v1/content", ContentRouter);
 // for updating content posted 
 app.use("/api/v1/video", VideoRouter);
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-})
+// app.listen(port, () => {
+//     console.log(`Server is running on port ${port}`);
+// })
+
+module.exports.handler = serverless(app);
