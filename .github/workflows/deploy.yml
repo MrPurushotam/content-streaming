@@ -32,24 +32,16 @@ jobs:
 
       - name: Create deployment package
         run: |
-          # Create a clean lambda package directory
           mkdir -p lambda-package
-
-          # Copy all files and directories except node_modules and unnecessary files
-          find . -type f -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
-
-          # Install only production dependencies in the package
+          find . -type f -not -path "./node_modules/*" -not -path "./git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
           cd lambda-package
-          npm install --omit=dev
-
-          # Zip the final package
-          zip -r ../function.zip .
-
-          #verify the zip was created.
-          ls -l ../function.zip 
+          zip -r ../function.zip . # Create zip in root of repo.
+          ls -l ../function.zip # Verify the zip was created.
+          echo "GITHUB_WORKSPACE: ${{ github.workspace }}" #debug
+          ls -l ${{ github.workspace }} #debug
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -57,8 +49,8 @@ jobs:
 
       - name: Deploy to Lambda
         run: |
-            pwd
-            ls -l
-            aws lambda update-function-code \
-              --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-              --zip-file fileb://${{ github.workspace }}/function.zip
+          pwd
+          ls -l
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://${{ github.workspace }}/function.zip
