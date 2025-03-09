@@ -28,15 +28,15 @@ jobs:
           cache-dependency-path: "./backend/package-lock.json"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --production
 
       - name: Create deployment package
         run: |
           mkdir -p lambda-package
-          find . -type f -not -path "./node_modules/*" -not -path "./git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
+          cp -r node_modules lambda-package/
+          find . -type f -not -path "./.git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
           cd lambda-package
-          zip -r ../function.zip . 
-
+          zip -r ../function.zip .
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
