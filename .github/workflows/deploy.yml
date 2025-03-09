@@ -32,11 +32,16 @@ jobs:
 
       - name: Create deployment package
         run: |
+          rm -f function.zip  # Ensure no leftover zip exists
           mkdir -p lambda-package
           cp -r node_modules lambda-package/
-          find . -type f -not -path "./.git/*" -not -path "./lambda-package/*" | xargs -I{} cp --parents {} lambda-package/
+          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json
           cd lambda-package
           zip -r ../function.zip .
+      
+      - name: Verify ZIP contents
+        run: unzip -l function.zip
+
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
