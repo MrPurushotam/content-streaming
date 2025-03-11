@@ -28,6 +28,8 @@ jobs:
           cache-dependency-path: "./backend/package-lock.json"
 
       - name: Install dependencies
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm ci --omit=dev
 
       - name: Create deployment package
