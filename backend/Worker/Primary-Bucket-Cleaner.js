@@ -13,7 +13,7 @@ const crypto = require('crypto');
 const bucketName = process.env.AWS_S3_PRIMARYBUCKET_NAME;
 
 // Lock file path and process identifier
-const LOCK_DIR = path.join(__dirname, '/tep/lock');
+const LOCK_DIR = path.join('/tmp', 'lock');
 const LOCK_FILE = path.join(LOCK_DIR, 'cleaner.lock');
 const PROCESS_ID = crypto.randomBytes(16).toString('hex');
 

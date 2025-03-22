@@ -7,7 +7,7 @@ const fs = require('fs');
 const fsExtra = require('fs-extra');
 
 // Lock file path and process identifier
-const LOCK_DIR = path.join(__dirname, '/tep/lock');
+const LOCK_DIR = path.join('/tmp', 'lock');
 const LOCK_FILE = path.join(LOCK_DIR, 'processor.lock');
 const PROCESS_ID = crypto.randomBytes(16).toString('hex');
 
