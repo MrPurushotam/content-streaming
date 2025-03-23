@@ -76,7 +76,7 @@ const corsOption = {
 app.use(cors(corsOption));
 app.use(express.json());
 
-app.get("/status", (req, res) => {
+app.get("/", (req, res) => {
     res.json({ message: "Api is running." });
 })
 
