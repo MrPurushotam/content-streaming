@@ -73,10 +73,49 @@ const UploadContent = () => {
 
   const uploadToS3 = async (url: string, file: File) => {
     try {
-      await axios.put(url, file, { headers: { "Content-Type": file.type } })
+      setPopupMessage(`Uploading video: 0%`);
+      
+      // Validate content type
+      if (!file.type.startsWith('video/')) {
+        throw new Error("Invalid file type. Please upload a video file.");
+      }
+      
+      // Upload with progress tracking
+      await axios.put(url, file, {
+        headers: { 
+          "Content-Type": file.type,
+          "Content-Length": file.size.toString()
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setPopupMessage(`Uploading video: ${percentCompleted}%`);
+            setLoading(`${percentCompleted}% complete`);
+          }
+        }
+      });
+      
+      // Verify the upload was successful
+      setPopupMessage("Upload complete! Verifying...");
+      
     } catch (error: any) {
       console.log("Error occurred while uploading to S3.", error.message);
-      toast({ title: "Couldn't upload file to bucket.", description: error.message, variant: "destructive" });
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = error.message;
+      if (error.response) {
+        // Server responded with a non-2xx status
+        errorMessage = `Server error: ${error.response.status} - ${error.response.statusText}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
+      toast({ 
+        title: "Couldn't upload file to bucket.", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
       throw error;
     }
   };
