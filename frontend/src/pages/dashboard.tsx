@@ -202,6 +202,7 @@ const Dashboard = () => {
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
                         <SelectItem value="mix">Published | Processing</SelectItem>
+                        <SelectItem value="uploaded">Uploaded</SelectItem>
                         <SelectItem value="failed">Failed</SelectItem>
                         <SelectItem value="deleted">Deleted</SelectItem>
                       </SelectContent>
