@@ -4,7 +4,7 @@ const { parentPort } = require("worker_threads");
 const { fetchObjectsWhereUploadedTimeGreaterThan3Hours } = require("../utils/Queue");
 const S3 = require("../libs/aws");
 const prismaClient = require("../utils/PrismaClient");
-const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { DeleteObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3");
 const path = require('path');
 const fs = require('fs');
 const fsExtra = require('fs-extra');
@@ -79,8 +79,56 @@ const releaseLock = () => {
 const MAX_RETRIES = 3;
 let retryCount = 0;
 
+// Check if S3 object exists
+async function checkS3ObjectExists(location) {
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: bucketName,
+      Key: location,
+    });
+    await S3.send(command);
+    return true;
+  } catch (err) {
+    // Object doesn't exist or other error occurred
+    if (err.name === 'NotFound') {
+      parentPort.postMessage({ type: "info", message: `Object not found in S3: ${location}` });
+    } else {
+      parentPort.postMessage({ type: "error", message: `Error checking S3 object: ${location}. Error: ${err.message}` });
+    }
+    return false;
+  }
+}
+
+// Delete S3 object
+async function deleteS3Object(location) {
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: location,
+    });
+    await S3.send(command);
+    return true;
+  } catch (err) {
+    parentPort.postMessage({ type: "error", message: `Failed to delete S3 object: ${location}. Error: ${err.message}` });
+    return false;
+  }
+}
+
+// Update database record
+async function updateDatabaseRecord(id) {
+  try {
+    await prismaClient.videoSourceInfo.update({
+      where: { id: id },
+      data: { deleted: true },
+    });
+    return true;
+  } catch (err) {
+    parentPort.postMessage({ type: "error", message: `Failed to update Prisma entry for ID: ${id}. Error: ${err.message}` });
+    return false;
+  }
+}
+
 async function Cleaner() {
-  // Try to acquire lock
   if (!await acquireLock()) {
     parentPort.postMessage({ type: "info", message: "Another cleaner is already running" });
     return;
@@ -91,36 +139,35 @@ async function Cleaner() {
   try {
     // fetch those objects from the queue which have uploadTime > 3hr 
     const tasksToDelete = await fetchObjectsWhereUploadedTimeGreaterThan3Hours("primary_bucket_queue");
+    
+    parentPort.postMessage({ type: "info", message: `Found ${tasksToDelete.length} tasks to process.` });
+    let successCount = 0;
 
     for (const task of tasksToDelete) {
       const { location, id } = task;
-
-      // Delete the object from S3
-      try {
-        const command = new DeleteObjectCommand({
-          Bucket: bucketName,
-          Key: location,
-        });
-        await S3.send(command);
+      
+      // Check if object exists in S3 before attempting to delete
+      const objectExists = await checkS3ObjectExists(location);
+      
+      if (objectExists) {
+        // Delete the object from S3
+        const s3DeleteSuccess = await deleteS3Object(location);
+        if (!s3DeleteSuccess) continue;
+        
         parentPort.postMessage({ type: "info", message: `Deleted S3 object: ${location}` });
-      } catch (err) {
-        parentPort.postMessage({ type: "error", message: `Failed to delete S3 object: ${location}. Error: ${err.message}` });
-        continue;
+      } else {
+        parentPort.postMessage({ type: "info", message: `Skipped deletion for non-existent object: ${location}` });
       }
 
-      try {
-        await prismaClient.videoSourceInfo.update({
-          where: { id: id },
-          data: { deleted: true },
-        });
-        parentPort.postMessage({ type: "info", message: `Updated Prisma entry for ID: ${id}` });
-      } catch (err) {
-        parentPort.postMessage({ type: "error", message: `Failed to update Prisma entry for ID: ${id}. Error: ${err.message}` });
-        continue;
-      }
+      // Update the database record regardless of whether object existed
+      const dbUpdateSuccess = await updateDatabaseRecord(id);
+      if (!dbUpdateSuccess) continue;
+      
+      parentPort.postMessage({ type: "info", message: `Updated Prisma entry for ID: ${id}` });
+      successCount++;
     }
 
-    parentPort.postMessage({ type: "info", message: "Entries older than 3 hours have been removed." });
+    parentPort.postMessage({ type: "info", message: `Cleaning completed. Successfully processed ${successCount}/${tasksToDelete.length} tasks.` });
     retryCount = 0; // Reset retry count on success
   } catch (error) {
     parentPort.postMessage({ type: "error", message: 'Cleaning process failed: ' + error.message });
@@ -140,8 +187,9 @@ async function Cleaner() {
 // Run the Cleaner function once at the start of the server
 Cleaner();
 
-// Run the Cleaner function every 6 hours
-setInterval(Cleaner, 6 * 3600 * 1000);
+// Run the Cleaner function every 6 hours (consider making this configurable via env var)
+const CLEANUP_INTERVAL = process.env.CLEANUP_INTERVAL_HOURS || 6;
+setInterval(Cleaner, CLEANUP_INTERVAL * 3600 * 1000);
 
 // Cleanup lock on process termination
 process.on('SIGINT', () => {

@@ -24,7 +24,6 @@ const ensureLockDirectory = () => {
   }
 };
 
-
 // Lock management with deadlock prevention
 const acquireLock = async () => {
   try {
@@ -33,14 +32,20 @@ const acquireLock = async () => {
     }
 
     if (fs.existsSync(LOCK_FILE)) {
-      const lockData = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
+      try {
+        const lockData = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
 
-      // Check if lock is stale (older than 1 hour)
-      if (Date.now() - lockData.timestamp > 3600000) {
-        console.log('Found stale lock, removing...');
+        // Check if lock is stale (older than 1 hour)
+        if (Date.now() - lockData.timestamp > 3600000) {
+          console.log('Found stale lock, removing...');
+          fs.unlinkSync(LOCK_FILE);
+        } else {
+          return false;
+        }
+      } catch (parseError) {
+        // Handle corrupted lock file
+        console.warn('Found corrupted lock file, removing...', parseError);
         fs.unlinkSync(LOCK_FILE);
-      } else {
-        return false;
       }
     }
 
