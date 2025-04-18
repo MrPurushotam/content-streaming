@@ -41,11 +41,46 @@ const UploadContent = () => {
   const uniqueIdRef = useRef<string>("");
   const contentIdRef = useRef<number>(0);
 
+  // Add these constants for file size limits
+  const MAX_THUMBNAIL_SIZE_MB: number = 4;
+  const MAX_VIDEO_SIZE_MB: number = 150;
+
+  // Helper function to check file size
+  const isFileSizeValid = (file: File, maxSizeMB: number): boolean => {
+    const fileSizeInMB = file.size / (1024 * 1024);
+    return fileSizeInMB <= maxSizeMB;
+  };
+
+
   const handleThumbnailUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!isFileSizeValid(file, MAX_THUMBNAIL_SIZE_MB)) {
+        toast({
+          title: "File too large",
+          description: `Thumbnail must be smaller than ${MAX_THUMBNAIL_SIZE_MB}MB`,
+          variant: "destructive"
+        });
+        return;
+      }
       setThumbnail(file);
       setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Add a handler for video file changes with size check
+  const handleVideoUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!isFileSizeValid(file, MAX_VIDEO_SIZE_MB)) {
+        toast({
+          title: "File too large",
+          description: `Video must be smaller than ${MAX_VIDEO_SIZE_MB}MB`,
+          variant: "destructive"
+        });
+        return;
+      }
+      setVideo(file);
     }
   };
 
@@ -74,15 +109,15 @@ const UploadContent = () => {
   const uploadToS3 = async (url: string, file: File) => {
     try {
       setPopupMessage(`Uploading video: 0%`);
-      
+
       // Validate content type
       if (!file.type.startsWith('video/')) {
         throw new Error("Invalid file type. Please upload a video file.");
       }
-      
+
       // Upload with progress tracking
       await axios.put(url, file, {
-        headers: { 
+        headers: {
           "Content-Type": file.type,
           "Content-Length": file.size.toString()
         },
@@ -94,13 +129,13 @@ const UploadContent = () => {
           }
         }
       });
-      
+
       // Verify the upload was successful
       setPopupMessage("Upload complete! Verifying...");
-      
+
     } catch (error: any) {
       console.log("Error occurred while uploading to S3.", error.message);
-      
+
       // Provide more specific error messages based on the error type
       let errorMessage = error.message;
       if (error.response) {
@@ -110,11 +145,11 @@ const UploadContent = () => {
         // Request was made but no response received
         errorMessage = "Network error. Please check your connection and try again.";
       }
-      
-      toast({ 
-        title: "Couldn't upload file to bucket.", 
-        description: errorMessage, 
-        variant: "destructive" 
+
+      toast({
+        title: "Couldn't upload file to bucket.",
+        description: errorMessage,
+        variant: "destructive"
       });
       throw error;
     }
@@ -169,6 +204,24 @@ const UploadContent = () => {
       toast({ title: "Error", description: "Please select a video.", variant: "destructive" });
       return;
     }
+    if (thumbnail && !isFileSizeValid(thumbnail, MAX_THUMBNAIL_SIZE_MB)) {
+      toast({
+        title: "Thumbnail too large",
+        description: `Maximum allowed size is ${MAX_THUMBNAIL_SIZE_MB}MB`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isFileSizeValid(video, MAX_VIDEO_SIZE_MB)) {
+      toast({
+        title: "Video too large",
+        description: `Maximum allowed size is ${MAX_VIDEO_SIZE_MB}MB`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading("Uploading...");
     setPopupMessage("Starting upload process...");
     setIsPopoverOpen(true);
@@ -248,9 +301,10 @@ const UploadContent = () => {
               </button>
             </div>
           ) : (
-            <label className="w-40 h-40 flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition">
+            <label className="w-40 h-40 flex flex-col items-center justify-center bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition">
               <Input type="file" accept="image/*" disabled={loading.length > 0} onChange={handleThumbnailUpload} className="hidden" />
               <span className="text-gray-500">Upload Thumbnail</span>
+              <span className="text-xs text-gray-500 mt-1">Max: {MAX_THUMBNAIL_SIZE_MB}MB</span>
             </label>
           )}
         </div>
@@ -277,7 +331,7 @@ const UploadContent = () => {
           {/* Video Upload */}
           <div>
             <label className="block text-lg font-semibold text-gray-700 mb-1">Video</label>
-            <Input type="file" disabled={loading.length > 0} accept="video/*" onChange={(e) => setVideo(e.target.files?.[0] || null)} className="w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-400" />
+            <Input type="file" disabled={loading.length > 0} accept="video/*" onChange={handleVideoUpload} className="w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-400" />
           </div>
 
           {/* Upload Button */}
