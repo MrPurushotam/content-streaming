@@ -65,7 +65,7 @@ jobs:
         run: npm ci --omit=dev
 
       - name: Download Prisma artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: prisma-client
           path: ./backend/node_modules/
@@ -118,7 +118,7 @@ jobs:
         run: npm ci --omit=dev
 
       - name: Download Prisma artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: prisma-client
           path: ./backend/pipeline/S3Cleanup/node_modules/
@@ -168,7 +168,7 @@ jobs:
         run: npm ci --omit=dev
 
       - name: Download Prisma artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: prisma-client
           path: ./backend/pipeline/VideoProcessing/node_modules/
