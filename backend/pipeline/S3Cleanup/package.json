@@ -1,0 +1,23 @@
+{
+  "name": "s3cleanup",
+  "version": "1.0.0",
+  "description": "code for clearning out s3 bucket after certain time frame ",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "author": "Purushotam Jeswani",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.777.0",
+    "@prisma/client": "^6.4.1",
+    "dotenv": "^16.4.7",
+    "fs-extra": "^11.3.0",
+    "prisma": "^6.4.1",
+    "redis": "^4.7.0"
+  },
+  "devDependencies": {
+    "prisma": "6.4.1"
+  }
+}

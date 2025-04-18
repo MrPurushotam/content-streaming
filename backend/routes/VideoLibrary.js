@@ -3,7 +3,6 @@ const authorizeHeader = require("../middleware/authentication");
 const uploadThumbnail = require("../middleware/multer");
 const prismaClient = require("../utils/PrismaClient");
 const { DeleteObjectsCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const { redisClient } = require("../utils/Queue");
 const adminAuthorizer = require("../middleware/admin");
 const router = require("express").Router();
 const path = require('path');
@@ -196,7 +195,6 @@ router.put("/:id", uploadThumbnail.single("thumbnail"), async (req, res) => {
             };
             await S3.send(new DeleteObjectCommand(deleteParams));
         }
-
         //TODO: logic to delete prevThumbnail
         const updatedData = await prismaClient.Content.update({ where: { id }, data });
 

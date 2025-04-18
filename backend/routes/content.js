@@ -27,7 +27,7 @@ router.get("/createurl", async (req, res) => {
             ContentType: "video/*"
         });
 
-        const presignedUrl = await getSignedUrl(S3, command, { expiresIn: 3 * 3600});
+        const presignedUrl = await getSignedUrl(S3, command, { expiresIn: 3 * 3600 });;
 
         const videoSourceInfo = await prismaClient.VideoSourceInfo.create({
             data: {
@@ -40,6 +40,20 @@ router.get("/createurl", async (req, res) => {
         const updatePrimaryBucketQueue = await uploadMessageToQueue("primary_bucket_queue", videoSourceInfo)
         console.log("Updated task to queue ", updatePrimaryBucketQueue)
         res.header("x-unique-id", uniqueId);
+        try {
+            // Send a non-blocking request to the video processing server
+            fetch(`${process.env.S3CLEANUP_FUNCTION_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(() => console.log("Sent request to S3 Cleanup server"))
+                .catch(err => console.error("Error sending request to video processing server:", err));
+
+        } catch (error) {
+            console.error("Failed to trigger s3 cleanup function:", error);
+        }
         res.status(200).json({ success: true, url: presignedUrl, uniqueId: uniqueId });
     } catch (error) {
         console.error('Error generating presigned URL:', error);
@@ -129,6 +143,36 @@ router.post("/confirmsource", async (req, res) => {
         const messageObject = { videoUrl: `${process.env.AWS_S3_PRIMARYBUCKET_NAME}/${confrim.location}`, uniqueId, userId: req.id, contentId }
         const updatedToQueue = await uploadMessageToQueue("ffmpeg_queue", messageObject)
         console.log("Updated task to queue ", updatedToQueue)
+        try {
+            // Send a non-blocking request to the video processing server
+            fetch(`${process.env.VIDEO_PROCESSING_FUNCTION_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(() => console.log("Sent request to video processing server"))
+                .catch(err => console.error("Error sending request to video processing server:", err));
+
+        } catch (error) {
+            console.error("Failed to trigger video processing function:", error);
+        }
+
+        try {
+            // Send a non-blocking request to the video processing server
+            fetch(`${process.env.S3CLEANUP_FUNCTION_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(() => console.log("Sent request to S3 Cleanup server"))
+                .catch(err => console.error("Error sending request to video processing server:", err));
+
+            console.log("Triggered cleanup function");
+        } catch (error) {
+            console.error("Failed to trigger s3 cleanup function:", error);
+        }
         res.removeHeader('x-unique-id')
         res.status(200).json({ success: true, message: 'Updated videoSourceInfo successfully. Please wait untill the video goes live it shall take some time.' });
     } catch (error) {

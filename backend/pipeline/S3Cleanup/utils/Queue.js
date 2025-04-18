@@ -76,31 +76,6 @@ async function ensureConnection() {
     return redisClient;
 }
 
-async function getQueueLength(qName) {
-    try {
-        const redisClient = await ensureConnection();
-        const length = await redisClient.lLen(qName);
-        return length;
-    } catch (error) {
-        console.error('Error occurred while getting queue length:', error);
-        return -1;
-    }
-}
-
-async function getTopMessage(qName) {
-    try {
-        const redisClient = await ensureConnection();
-        const message = await redisClient.lRange(qName, -1, -1);
-        if (message.length) {
-            return JSON.parse(message[0]);
-        }
-        return null;
-    } catch (error) {
-        console.error('Error occurred while getting top message:', error);
-        return null;
-    }
-}
-
 async function uploadMessageToQueue(qName, message) {
     try {
         const redisClient = await ensureConnection();
@@ -114,59 +89,82 @@ async function uploadMessageToQueue(qName, message) {
     }
 }
 
-async function deleteTopMessageFromQueue(qName) {
-    try {
-        const redisClient = await ensureConnection();
-        const message = await redisClient.lPop(qName);
-        if (message) {
-            console.log(`Top message deleted from queue '${qName}'`);
-            return true;
-        } else {
-            console.log(`No message found in queue '${qName}'`);
-            return true;
-        }
-    } catch (error) {
-        console.error('Error occurred while deleting top message from queue:', error);
-        return false;
-    }
-}
-
-async function fetchObjectsWhereUploadedTimeGreaterThan3Hours(qName) {
+/**
+ * Fetches objects from the queue that are older than the specified time
+ * and removes them from the queue.
+ *
+ * @param {string} qName - The name of the Redis queue
+ * @param {number} time - Time in milliseconds (defaults to 3 hours)
+ * @param {boolean} removeFromQueue - Whether to remove processed messages (defaults to true)
+ * @returns {Promise<Array>} - Array of filtered message objects
+ */
+async function fetchObjectsWhereUploadedTimeGreaterThan3Hours(qName, time = 3 * 60 * 60 * 1000, removeFromQueue = true) {
     try {
         const redisClient = await ensureConnection();
 
-        // Getting all messages is inefficient - consider using a sorted set instead
-        // for time-based queries or implement pagination
+        // Get all messages from the queue
         const messages = await redisClient.lRange(qName, 0, -1);
 
         if (!messages || messages.length === 0) {
+            console.log(`No messages found in queue '${qName}'`);
             return [];
         }
 
-        const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000;
+        const cutoffTime = Date.now() - time;
         const filteredMessages = [];
+        const messagesToRemove = [];
 
+        // First pass: filter messages based on age
         for (const msg of messages) {
             try {
                 const messageObj = JSON.parse(msg);
-                if (!messageObj.createdAt) continue;
 
                 const uploadTime = new Date(messageObj.createdAt).getTime();
-                if (uploadTime > threeHoursAgo) {
+                if (uploadTime < cutoffTime) {
                     filteredMessages.push(messageObj);
+                    messagesToRemove.push(msg);
                 }
             } catch (parseError) {
-                console.error('Error parsing message:', parseError);
+                console.error('Error parsing message:', parseError, 'Message:', msg.substring(0, 100) + '...');
+            }
+        }
+
+        console.log(`Found ${filteredMessages.length} messages older than the specified time threshold`);
+
+        // Remove messages if requested
+        if (removeFromQueue && messagesToRemove.length > 0) {
+            // Use multi to batch removal operations
+            const multi = redisClient.multi();
+
+            for (const msg of messagesToRemove) {
+                // Remove each message from the queue (only remove 1 occurrence)
+                multi.lRem(qName, 1, msg);
+            }
+
+            // Execute all removal commands in one batch
+            const results = await multi.exec();
+
+            console.log(`Removed ${messagesToRemove.length} messages from queue '${qName}'`);
+
+            // Check for any failed operations
+            let failedOperations = 0;
+            for (let i = 0; i < results.length; i++) {
+                if (results[i] === null || results[i] <= 0) {
+                    failedOperations++;
+                }
+            }
+
+            if (failedOperations > 0) {
+                console.warn(`${failedOperations} message removal operations failed`);
             }
         }
 
         return filteredMessages;
     } catch (error) {
-        console.error('Error occurred while fetching messages older than 3 hours:', error);
+        console.error('Error occurred while fetching/removing old messages:', error);
         return [];
     }
 }
-
 async function disconnectRedis() {
     try {
         const redisClient = getRedisClient();
@@ -180,13 +178,8 @@ async function disconnectRedis() {
 }
 
 module.exports = {
-    connectToRedis,
-    getQueueLength,
-    getTopMessage,
     uploadMessageToQueue,
-    deleteTopMessageFromQueue,
-    fetchObjectsWhereUploadedTimeGreaterThan3Hours,
     disconnectRedis,
     getRedisClient,
-    ensureConnection
+    fetchObjectsWhereUploadedTimeGreaterThan3Hours
 };

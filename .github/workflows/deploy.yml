@@ -1,4 +1,4 @@
-name: Deploy Lambda Function
+name: Deploy Lambda Functions
 
 on:
   push:
@@ -7,11 +7,43 @@ on:
     paths:
       - "backend/**"
   workflow_dispatch:
+    
 jobs:
-  deploy:
-    name: deploy to lambda
+  prepare-prisma-client:
+    name: Prepare Prisma Client
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/package-lock.json"
+
+      - name: Install dependencies
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm ci
+
+      - name: Upload Prisma artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prisma-client
+          path: |
+            ./backend/node_modules/@prisma
+            ./backend/node_modules/.prisma
+          retention-days: 1
+
+  deploy-backend:
+    name: Deploy to Primary Backend
+    runs-on: ubuntu-latest
+    needs: prepare-prisma-client
     defaults:
       run:
         working-directory: ./backend
@@ -32,6 +64,12 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm ci --omit=dev
 
+      - name: Download Prisma artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: prisma-client
+          path: ./backend/node_modules/
+
       - name: Create deployment package
         run: |
           rm -f function.zip  # Ensure no leftover zip exists
@@ -44,7 +82,6 @@ jobs:
       - name: Verify ZIP contents
         run: unzip -l function.zip
 
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -56,4 +93,107 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://function.zip
+
+  deploy-service-1:
+    name: Deploy S3 cleanup to lambda
+    runs-on: ubuntu-latest
+    needs: prepare-prisma-client
+    defaults:
+      run:
+        working-directory: ./backend/pipeline/S3Cleanup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/pipeline/S3Cleanup/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Download Prisma artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: prisma-client
+          path: ./backend/pipeline/S3Cleanup/node_modules/
+
+      - name: Create deployment package
+        run: |
+          rm -f function.zip  # Ensure no leftover zip exists
+          mkdir -p lambda-package
+          cp -r node_modules lambda-package/
+          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json
+          cd lambda-package
+          zip -r ../function.zip .
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.S3_CLEANUP_LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://function.zip
+
+  deploy-service-2:
+    name: Deploy Video Processing to lambda
+    runs-on: ubuntu-latest
+    needs: prepare-prisma-client
+    defaults:
+      run:
+        working-directory: ./backend/pipeline/VideoProcessing
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/pipeline/VideoProcessing/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Download Prisma artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: prisma-client
+          path: ./backend/pipeline/VideoProcessing/node_modules/
+
+      - name: Create deployment package
+        run: |
+          rm -f function.zip 
+          mkdir -p lambda-package
+          cp -r node_modules lambda-package/
+          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json
+          cd lambda-package
+          zip -r ../function.zip .
+          
+      - name: Verify ZIP contents
+        run: unzip -l function.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.VIDEO_PROCESSING_LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://function.zip

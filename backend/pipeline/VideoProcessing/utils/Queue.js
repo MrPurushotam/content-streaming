@@ -3,6 +3,7 @@ require('dotenv').config();
 
 let redisClientInstance;
 
+
 function getRedisClient() {
     if (!redisClientInstance) {
         redisClientInstance = redis.createClient({
@@ -48,7 +49,6 @@ function getRedisClient() {
     }
     return redisClientInstance;
 }
-
 async function connectToRedis() {
     try {
         if (!process.env.AIVEN_REDIS_URL || !process.env.AIVEN_REDIS_PASSWORD) {
@@ -74,17 +74,6 @@ async function ensureConnection() {
         await redisClient.connect();
     }
     return redisClient;
-}
-
-async function getQueueLength(qName) {
-    try {
-        const redisClient = await ensureConnection();
-        const length = await redisClient.lLen(qName);
-        return length;
-    } catch (error) {
-        console.error('Error occurred while getting queue length:', error);
-        return -1;
-    }
 }
 
 async function getTopMessage(qName) {
@@ -131,42 +120,6 @@ async function deleteTopMessageFromQueue(qName) {
     }
 }
 
-async function fetchObjectsWhereUploadedTimeGreaterThan3Hours(qName) {
-    try {
-        const redisClient = await ensureConnection();
-
-        // Getting all messages is inefficient - consider using a sorted set instead
-        // for time-based queries or implement pagination
-        const messages = await redisClient.lRange(qName, 0, -1);
-
-        if (!messages || messages.length === 0) {
-            return [];
-        }
-
-        const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000;
-        const filteredMessages = [];
-
-        for (const msg of messages) {
-            try {
-                const messageObj = JSON.parse(msg);
-                if (!messageObj.createdAt) continue;
-
-                const uploadTime = new Date(messageObj.createdAt).getTime();
-                if (uploadTime > threeHoursAgo) {
-                    filteredMessages.push(messageObj);
-                }
-            } catch (parseError) {
-                console.error('Error parsing message:', parseError);
-            }
-        }
-
-        return filteredMessages;
-    } catch (error) {
-        console.error('Error occurred while fetching messages older than 3 hours:', error);
-        return [];
-    }
-}
-
 async function disconnectRedis() {
     try {
         const redisClient = getRedisClient();
@@ -180,13 +133,9 @@ async function disconnectRedis() {
 }
 
 module.exports = {
-    connectToRedis,
-    getQueueLength,
     getTopMessage,
     uploadMessageToQueue,
     deleteTopMessageFromQueue,
-    fetchObjectsWhereUploadedTimeGreaterThan3Hours,
     disconnectRedis,
-    getRedisClient,
-    ensureConnection
+    getRedisClient
 };
