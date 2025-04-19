@@ -6,8 +6,9 @@ on:
       - main
     paths:
       - "backend/**"
+      - ".github/workflows/**"
   workflow_dispatch:
-    
+
 jobs:
   prepare-prisma-client:
     name: Prepare Prisma Client
@@ -64,13 +65,31 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm ci --omit=dev
 
-      - run: npm prune --production
-
       - name: Download Prisma artifacts
         uses: actions/download-artifact@v4
         with:
           name: prisma-client
           path: ./backend/node_modules/
+
+      - name: Clean up unnecessary binaries and files
+        run: |
+          # Remove unused Prisma binaries
+          rm -rf \
+            node_modules/@prisma/engines/schema-engine-* \
+            node_modules/@prisma/engines/migration-engine* \
+            node_modules/@prisma/engines/libquery_engine-* \
+            node_modules/.prisma/client/libquery_engine-* \
+
+          # Remove coverage and test artifacts
+          rm -rf node_modules/**/coverage \
+          node_modules/**/__tests__ \
+          node_modules/**/test \
+          node_modules/**/tests \
+          node_modules/**/example \
+          node_modules/**/.cache
+
+          # Remove esbuild if not needed at runtime
+          rm -rf node_modules/esbuild
 
       - name: Create deployment package
         run: |
@@ -80,14 +99,6 @@ jobs:
           rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json --exclude pipeline --exclude .env.example --exclude .gitignore 
           cd lambda-package
           zip -r ../function.zip .
-
-      - name: Inspect size
-        run: |
-          du -sh lambda-package
-          find lambda-package -type f -exec du -h {} + | sort -rh | head -n 20
-
-      - name: Verify ZIP contents
-        run: unzip -l function.zip
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -130,6 +141,26 @@ jobs:
           name: prisma-client
           path: ./backend/pipeline/S3Cleanup/node_modules/
 
+      - name: Clean up unnecessary binaries and files
+        run: |
+          # Remove unused Prisma binaries
+          rm -rf \
+            node_modules/@prisma/engines/schema-engine-* \
+            node_modules/@prisma/engines/migration-engine* \
+            node_modules/@prisma/engines/libquery_engine-* \
+            node_modules/.prisma/client/libquery_engine-* \
+
+          # Remove coverage and test artifacts
+          rm -rf node_modules/**/coverage \
+          node_modules/**/__tests__ \
+          node_modules/**/test \
+          node_modules/**/tests \
+          node_modules/**/example \
+          node_modules/**/.cache
+
+          # Remove esbuild if not needed at runtime
+          rm -rf node_modules/esbuild
+
       - name: Create deployment package
         run: |
           rm -f function.zip  # Ensure no leftover zip exists
@@ -138,7 +169,7 @@ jobs:
           rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json
           cd lambda-package
           zip -r ../function.zip .
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -180,6 +211,26 @@ jobs:
           name: prisma-client
           path: ./backend/pipeline/VideoProcessing/node_modules/
 
+      - name: Clean up unnecessary binaries and files
+        run: |
+          # Remove unused Prisma binaries
+          rm -rf \
+            node_modules/@prisma/engines/schema-engine-* \
+            node_modules/@prisma/engines/migration-engine* \
+            node_modules/@prisma/engines/libquery_engine-* \
+            node_modules/.prisma/client/libquery_engine-* \
+
+          # Remove coverage and test artifacts
+          rm -rf node_modules/**/coverage \
+          node_modules/**/__tests__ \
+          node_modules/**/test \
+          node_modules/**/tests \
+          node_modules/**/example \
+          node_modules/**/.cache
+
+          # Remove esbuild if not needed at runtime
+          rm -rf node_modules/esbuild
+
       - name: Create deployment package
         run: |
           rm -f function.zip 
@@ -188,9 +239,6 @@ jobs:
           rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json
           cd lambda-package
           zip -r ../function.zip .
-          
-      - name: Verify ZIP contents
-        run: unzip -l function.zip
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3

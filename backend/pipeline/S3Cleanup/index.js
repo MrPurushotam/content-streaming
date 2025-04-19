@@ -83,17 +83,6 @@ async function Cleaner(retryCount = 0) {
     }
 
     console.log(`Cleanup complete: ${successCount} objects deleted.`);
-    try {
-      fetch(`${process.env.S3CLEANUP_FUNCTION_URL}/health`, {
-        method: "GET ", headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(() => console.log("Sent request to S3 Cleanup server"))
-        .catch(err => console.error("Error sending request to video processing server:", err));
-
-    } catch (error) {
-      console.error("Failed to trigger s3 cleanup function:", error);
-    }
     return { message: "Cleanup completed" };
   } catch (error) {
     console.error("Error in Cleaner function:", error);
