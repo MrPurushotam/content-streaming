@@ -75,7 +75,7 @@ jobs:
           rm -f function.zip  # Ensure no leftover zip exists
           mkdir -p lambda-package
           cp -r node_modules lambda-package/
-          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json
+          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json --exclude pipeline
           cd lambda-package
           zip -r ../function.zip .
       
