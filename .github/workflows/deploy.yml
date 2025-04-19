@@ -65,7 +65,7 @@ jobs:
         run: npm ci --omit=dev
 
       - run: npm prune --production
-      
+
       - name: Download Prisma artifacts
         uses: actions/download-artifact@v4
         with:
@@ -80,7 +80,12 @@ jobs:
           rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json --exclude pipeline --exclude .env.example --exclude .gitignore 
           cd lambda-package
           zip -r ../function.zip .
-      
+
+      - name: Inspect size
+        run: |
+          du -sh lambda-package
+          find lambda-package -type f -exec du -h {} + | sort -rh | head -n 20
+
       - name: Verify ZIP contents
         run: unzip -l function.zip
 
