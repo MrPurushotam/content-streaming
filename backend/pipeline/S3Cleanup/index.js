@@ -29,7 +29,7 @@ async function deleteS3Object(location) {
 async function Cleaner(retryCount = 0) {
   try {
     console.log("Fetching objects older than 3 hours...");
-    const tasks = await fetchObjectsWhereUploadedTimeGreaterThan3Hours("primary_bucket_queue", 60 * 1000);
+    const tasks = await fetchObjectsWhereUploadedTimeGreaterThan3Hours("primary_bucket_queue", process.env.CLEANUP_INTERVAL_HOURS * 60 * 60 * 1000);
 
     if (!tasks || tasks.length === 0) {
       console.log("No objects found for cleanup.");
@@ -50,7 +50,7 @@ async function Cleaner(retryCount = 0) {
       if (exists) {
         if (!await deleteS3Object(location)) {
           console.log(`Failed to delete ${location}, adding to DLQ`);
-          await uploadMessageToQueue(DLQ_QUEUE, task); // Add the entire task to the DLQ
+          await uploadMessageToQueue(DLQ_QUEUE, task); 
           continue;
         }
       } else {

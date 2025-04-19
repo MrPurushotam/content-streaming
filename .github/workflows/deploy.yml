@@ -64,6 +64,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm ci --omit=dev
 
+      - run: npm prune --production
+      
       - name: Download Prisma artifacts
         uses: actions/download-artifact@v4
         with:
@@ -72,10 +74,10 @@ jobs:
 
       - name: Create deployment package
         run: |
-          rm -f function.zip  # Ensure no leftover zip exists
+          rm -f function.zip 
           mkdir -p lambda-package
           cp -r node_modules lambda-package/
-          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json --exclude pipeline
+          rsync -av --progress . lambda-package/ --exclude lambda-package --exclude .git --exclude package-lock.json --exclude pipeline --exclude .env.example --exclude .gitignore 
           cd lambda-package
           zip -r ../function.zip .
       
