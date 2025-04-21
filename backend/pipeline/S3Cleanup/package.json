@@ -14,7 +14,8 @@
     "@prisma/client": "~6.4.1",
     "dotenv": "^16.4.7",
     "fs-extra": "^11.3.0",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "serverless-http": "^3.2.0"
   },
   "devDependencies": {
     "prisma": "~6.4.1"
