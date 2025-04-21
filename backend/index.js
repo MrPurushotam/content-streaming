@@ -1,13 +1,13 @@
 const express = require("express");
 const app = express();
-const UserRouter = require("./routes/user")
-const ContentRouter = require("./routes/content")
-const VideoRouter = require("./routes/VideoLibrary")
+const UserRouter = require("./routes/user");
+const ContentRouter = require("./routes/content");
+const VideoRouter = require("./routes/VideoLibrary");
 const CheckVariousService = require("./routes/checkVariousService")
 const cors = require("cors");
 const { disconnectRedis } = require("./utils/Queue");
 const { connectToRedis } = require("./utils/Queue");
-const serverless = require("serverless-http")
+const serverless = require("serverless-http");
 
 require("dotenv").config();
 
