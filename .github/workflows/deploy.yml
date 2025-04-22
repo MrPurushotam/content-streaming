@@ -44,7 +44,6 @@ jobs:
           name: prisma-client
           path: |
             ./backend/node_modules/@prisma
-            ./backend/node_modules/.prisma
           retention-days: 1
 
   deploy-backend:
@@ -83,7 +82,6 @@ jobs:
           rm -rf \
             node_modules/@prisma/engines/schema-engine-* \
             node_modules/@prisma/engines/migration-engine* \
-            node_modules/@prisma/engines/libquery_engine-* \
             node_modules/.prisma/client/libquery_engine-* \
 
           # Remove coverage and test artifacts
@@ -153,7 +151,6 @@ jobs:
           rm -rf \
             node_modules/@prisma/engines/schema-engine-* \
             node_modules/@prisma/engines/migration-engine* \
-            node_modules/@prisma/engines/libquery_engine-* \
             node_modules/.prisma/client/libquery_engine-* \
 
           # Remove coverage and test artifacts
@@ -223,7 +220,6 @@ jobs:
           rm -rf \
             node_modules/@prisma/engines/schema-engine-* \
             node_modules/@prisma/engines/migration-engine* \
-            node_modules/@prisma/engines/libquery_engine-* \
             node_modules/.prisma/client/libquery_engine-* \
 
           # Remove coverage and test artifacts
