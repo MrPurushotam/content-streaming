@@ -31,6 +31,12 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm ci
+      
+      - name: Generate Prisma Client
+        run: |
+          npx prisma generate
+          ls -la ./node_modules/.prisma/client/
+  
 
       - name: Upload Prisma artifacts
         uses: actions/upload-artifact@v4
