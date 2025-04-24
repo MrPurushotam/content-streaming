@@ -31,12 +31,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm ci
-      
+
       - name: Generate Prisma Client
         run: |
           npx prisma generate
           ls -la ./node_modules/.prisma/client/
-  
 
       - name: Upload Prisma artifacts
         uses: actions/upload-artifact@v4
@@ -251,8 +250,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Lambda
+      - name: Upload package to S3 and deploy to Lambda
         run: |
+          # Upload the deployment package to S3
+          aws s3 cp function.zip s3://${{ secrets.DEP_BUCKET_NAME }}/video-processing/function-${{ github.sha }}.zip
+
+          # Update Lambda function code from S3
           aws lambda update-function-code \
             --function-name ${{ secrets.VIDEO_PROCESSING_LAMBDA_FUNCTION_NAME }} \
-            --zip-file fileb://function.zip
+            --s3-bucket ${{ secrets.DEP_BUCKET_NAME }} \
+            --s3-key video-processing/function-${{ github.sha }}.zip
