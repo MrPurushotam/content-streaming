@@ -1,0 +1,67 @@
+name: Publish NPM Package
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'Packages/CustomPrismaPackage/**'
+  workflow_dispatch:  
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Packages/CustomPrismaPackage
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      
+      - name: Build package
+        run: npm run build
+      
+      - name: Configure Git identity
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "github-actions@github.com"
+      
+      - name: Determine version bump type
+        id: bump-type
+        run: |
+          if [[ "$(git log -1 --pretty=%B)" == *"BREAKING CHANGE"* ]]; then
+            echo "Version bump: major"
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif [[ "$(git log -1 --pretty=%B)" == *"feat"* ]]; then
+            echo "Version bump: minor"
+            echo "type=minor" >> $GITHUB_OUTPUT
+          else
+            echo "Version bump: patch"
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Bump version
+        run: npm version ${{ steps.bump-type.outputs.type || 'patch' }} -m "Bump version to %s [skip ci]"
+      
+      - name: Push version changes
+        run: git push --follow-tags
+      
+      - name: Publish package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

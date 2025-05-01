@@ -1,0 +1,43 @@
+{
+  "name": "@mrpurushotam/prisma-package",
+  "version": "1.0.0",
+  "description": "Shared Prisma client and helpers for use across microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "prisma/schema.prisma",
+    "src/generated"
+  ],
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:sync": "npx prisma db pull && npx prisma generate",
+    "prepublishOnly": "npm run prisma:generate && npm run build",
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "author": "Purushotam",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MrPurushotam/content-streaming.git",
+    "directory": "Packages/CustomPrismaPackage"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.6.0",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.87",
+    "prisma": "^6.6.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

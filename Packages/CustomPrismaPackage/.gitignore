@@ -1,0 +1,40 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*
+
+# Prisma
+/src/generated/
+.prisma/
+.prisma/client/
+
+# TypeScript build output
+dist/
+*.tsbuildinfo
+
+# IDE/editor stuff
+.vscode/
+.idea/
+.DS_Store
+
+# OS files
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Optional lockfiles (depending on which you use)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

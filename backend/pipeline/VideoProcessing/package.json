@@ -1,7 +1,7 @@
 {
   "name": "videoprocessing",
   "version": "1.0.0",
-  "description": "Vide processing pipeline deployed in aws lambda ",
+  "description": "Vide0 processing pipeline deployed in aws lambda ",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
@@ -16,8 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.787.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "@prisma/client": "~6.4.1",
-    "prisma": "~6.4.1",
+    "@mrpurushotam/prisma-package": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",

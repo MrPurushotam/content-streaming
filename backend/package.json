@@ -5,18 +5,14 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "build": "npm run prisma:migrate",
-    "start": "node index.js",
-    "postinstall": "npm run prisma:migrate && npx prisma generate",
-    "prisma:migrate": "npx prisma migrate deploy",
-    "prisma:sync": "npx prisma db pull && npx prisma generate"
+    "start": "node index.js"
   },
   "author": "Purushotam",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
     "@aws-sdk/s3-request-presigner": "3.726.0",
-    "@prisma/client": "^6.4.1",
+    "@mrpurushotam/prisma-package": "^1.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -31,7 +27,6 @@
     "serverless-http": "^3.2.0"
   },
   "devDependencies": {
-    "prisma": "6.4.1",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1"
   }
