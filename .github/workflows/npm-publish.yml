@@ -5,7 +5,7 @@ on:
     branches: [main, master]
     paths:
       - "Packages/CustomPrismaPackage/**"
-      - ".github/Workflows/npm-publish.yml"
+      - ".github/workflows/npm-publish.yml" # Fixed case sensitivity
   workflow_dispatch:
 jobs:
   publish:
@@ -45,14 +45,18 @@ jobs:
       - name: Determine version bump type
         id: bump-type
         run: |
-          if [[ "$(git log -1 --pretty=%B)" == *"BREAKING CHANGE"* ]]; then
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [[ "$COMMIT_MSG" == *"BREAKING CHANGE"* ]]; then
             echo "Version bump: major"
             echo "type=major" >> $GITHUB_OUTPUT
-          elif [[ "$(git log -1 --pretty=%B)" == *"feat"* ]]; then
+          elif [[ "$COMMIT_MSG" == *"feat"* ]]; then
             echo "Version bump: minor"
             echo "type=minor" >> $GITHUB_OUTPUT
-          else
+          elif [[ "$COMMIT_MSG" == *"fix"* ]]; then
             echo "Version bump: patch"
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "No recognizable version bump keyword found. Defaulting to patch."
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
