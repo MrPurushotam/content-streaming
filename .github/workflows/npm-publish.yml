@@ -5,6 +5,7 @@ on:
     branches: [main, master]
     paths:
       - "Packages/CustomPrismaPackage/**"
+      - ".github/Workflows/npm-publish.yml"
   workflow_dispatch:
 jobs:
   publish:
@@ -56,8 +57,16 @@ jobs:
           fi
 
       - name: Bump version
-        run: npm version ${{ steps.bump-type.outputs.type || 'patch' }} -m "Bump version to %s [skip ci]"
-
+        run: |
+          VERSION_TYPE=${{ steps.bump-type.outputs.type }}
+          if [ -z "$VERSION_TYPE" ]; then
+            VERSION_TYPE=patch
+          fi
+          npm version $VERSION_TYPE -m "Bump version to %s [skip ci]"
+          
+      - name: Show package version
+        run: cat package.json | grep version
+        
       - name: Push version changes
         run: git push --follow-tags
 
