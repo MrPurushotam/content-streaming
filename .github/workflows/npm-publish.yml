@@ -67,12 +67,15 @@ jobs:
             VERSION_TYPE=patch
           fi
           npm version $VERSION_TYPE -m "Bump version to %s [skip ci]"
-          
-      - name: Show package version
+
+      - name: Verify updated version
         run: cat package.json | grep version
-        
+
       - name: Push version changes
-        run: git push --follow-tags
+        run: |
+          git add package.json
+          git commit -m "Update version in package.json [skip ci]"
+          git push --follow-tags --force
 
       - name: Publish package
         run: npm publish
