@@ -1,6 +1,6 @@
 {
   "name": "@mrpurushotam/prisma-package",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared Prisma client and helpers for use across microservices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
