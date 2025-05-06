@@ -10,8 +10,6 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg");
 const { pipeline } = require('stream');
 
-
-
 const redis = getRedisClient();
 const streamPipeline = promisify(pipeline);
 ffmpeg.setFfmpegPath(ffmpegPath.path);
@@ -24,8 +22,10 @@ async function processVideoJob() {
     let userId = null;
     let tempDir = null;
     let message = null;
+    let cancelTopMessageRemove = false;
     try {
         // Step 1: Fetch job from queue
+        console.log("Fetching job from queue...");
         message = await getTopMessage("ffmpeg_queue");
         if (!message) {
             console.log("No messages in queue.");
@@ -33,14 +33,14 @@ async function processVideoJob() {
         }
 
         ({ videoUrl, uniqueId, contentId, userId } = message);
+        console.log(`Job details - Unique ID: ${uniqueId}, Content ID: ${contentId}, User ID: ${userId}, Video URL: ${videoUrl}`);
+
         const retryCount = message.retryCount || 0;
         console.log("Processing video:", uniqueId);
 
         const MAX_RETRIES = 3;
         if (retryCount >= MAX_RETRIES) {
             console.log(`Job ${uniqueId} exceeded maximum retry count (${MAX_RETRIES})`);
-
-            await deleteTopMessageFromQueue("ffmpeg_queue");
 
             // Update DB to mark as permanently failed
             try {
@@ -53,10 +53,9 @@ async function processVideoJob() {
             } catch (error) {
                 console.error(`Failed to mark content ${contentId} as permanently failed:`, error);
             }
+            cancelTopMessageRemove=true;
             return { message: `Job ${uniqueId} abandoned after ${MAX_RETRIES} attempts` };
         }
-
-        await deleteTopMessageFromQueue("ffmpeg_queue");
 
         const isProcessing = await redis.get(uniqueId);
         if (isProcessing) {
@@ -64,7 +63,7 @@ async function processVideoJob() {
             return;
         }
 
-        // Set a lock with expiration
+        console.log(`Setting lock for job ${uniqueId}...`);
         await redis.set(uniqueId, "processing", "EX", 900);
 
         const primaryBucket = process.env.AWS_S3_PRIMARYBUCKET_NAME;
@@ -74,44 +73,45 @@ async function processVideoJob() {
         const inputPath = path.join(tempDir, 'input');
         const outputDir = path.join(tempDir, 'output');
 
+        console.log(`Creating temporary directories for job ${uniqueId}...`);
         await fsExtra.ensureDir(tempDir);
         await fsExtra.ensureDir(outputDir);
 
         // Step 2: Download file from S3
-        await downloadFile(videoUrl, inputPath);
+        console.log(`Downloading video from S3: ${videoUrl}`);
+        const downloadResult = await downloadFile(videoUrl, inputPath);
+        if (!downloadResult) {
+            console.log("Skipping job due to missing file.");
+            return { message: "Skipped job due to missing file", uniqueId };
+        }
         console.log("Video downloaded successfully:", inputPath);
 
         // Step 3: Process video with FFmpeg
-        console.log("Video processing started");
+        console.log("Starting video processing...");
         const processedFiles = await processVideo(inputPath, outputDir);
-        console.log("Video processing completed");
+        console.log("Video processing completed successfully.");
 
         // Step 4: Upload HLS files to S3
+        console.log("Uploading processed files to S3...");
         const masterPlaylistPath = path.join(outputDir, 'master.m3u8');
         const masterKey = `video/${uniqueId}/master.m3u8`;
-        console.log(masterPlaylistPath, masterKey)
+        console.log(`Uploading master playlist: ${masterPlaylistPath} to ${masterKey}`);
         await uploadToS3(secondaryBucket, masterKey, masterPlaylistPath);
-        console.log("uploaded file to s3")
+
         const uploadPromise = processedFiles.map(async ({ resolution, outputPath }) => {
+            console.log(`Uploading resolution ${resolution} playlist to S3...`);
             const playlistKey = `video/${uniqueId}/${resolution}/playlist.m3u8`;
             await uploadToS3(secondaryBucket, playlistKey, outputPath);
-
             await uploadHLSFiles(secondaryBucket, uniqueId, resolution, outputPath);
-
-            return {
-                resolution,
-                url: `/video/${uniqueId}/${resolution}/playlist.m3u8`
-            };
-
-        })
+            return { resolution, url: `/video/${uniqueId}/${resolution}/playlist.m3u8` };
+        });
 
         const bitRates = await Promise.all(uploadPromise);
-        console.log(bitRates)
+        console.log("All files uploaded successfully:", bitRates);
 
         // Step 5: Update database
+        console.log("Updating database with processed video details...");
         const masterManifestUrl = `/video/${uniqueId}/master.m3u8`;
-        console.log(masterManifestUrl)
-
         await prismaClient.$transaction(async (prisma) => {
             await Promise.all(
                 bitRates.map(({ resolution, url }) => prisma.BiteRateVideo.create({
@@ -123,26 +123,22 @@ async function processVideoJob() {
                 where: { id: parseInt(contentId, 10) },
                 data: { manifestUrl: masterManifestUrl, status: 'published' },
             });
-
         });
+        console.log("Database updated successfully.");
 
-        // Step 6: Remove job from queue
-        await deleteTopMessageFromQueue("ffmpeg_queue");
-
+        console.log("Releasing lock for job:", uniqueId);
         await redis.del(uniqueId);
-        console.log("Cleanup completed:", tempDir);
 
+        console.log("Triggering S3 cleanup function...");
         try {
             fetch(`${process.env.S3CLEANUP_FUNCTION_URL}/health`, {
-                method: "GET ", headers: {
-                    'Content-Type': 'application/json'
-                }
+                method: "GET", headers: { 'Content-Type': 'application/json' }
             }).then(() => console.log("Sent request to S3 Cleanup server"))
                 .catch(err => console.error("Error sending request to video processing server:", err));
-
         } catch (error) {
-            console.error("Failed to trigger s3 cleanup function:", error);
+            console.error("Failed to trigger S3 cleanup function:", error);
         }
+
         return { message: "Processing completed", uniqueId };
     } catch (error) {
         console.error("Processing error:", error);
@@ -150,7 +146,6 @@ async function processVideoJob() {
         if (contentId) {
             try {
                 await prismaClient.$transaction(async (prisma) => {
-
                     await prisma.Content.update({
                         where: { id: parseInt(contentId, 10) },
                         data: { status: 'uploading' },
@@ -161,21 +156,30 @@ async function processVideoJob() {
                 console.error("Error updating content status:", dbError);
             }
         }
+
         if (uniqueId && videoUrl && contentId && userId) {
             const retryCount = message && message.retryCount ? message.retryCount + 1 : 1;
-            console.log(`Re-queueing job ${uniqueId} due to failure.`);
-            await uploadMessageToQueue("ffmpeg_queue", { videoUrl, uniqueId, contentId, userId, retryCount });
+            console.log(`Re-queueing job ${uniqueId} with updated retry count: ${retryCount}`);
+            message.retryCount = retryCount; // Update the retry count in the message object
+            await uploadMessageToQueue("ffmpeg_queue", message); // Re-upload the updated message
         }
 
     } finally {
+        console.log("Performing cleanup...");
         try {
             if (uniqueId) {
+                console.log(`Releasing lock for job ${uniqueId}...`);
                 await redis.del(uniqueId);
             }
 
             if (tempDir) {
+                console.log(`Removing temporary directory: ${tempDir}`);
                 await fsExtra.remove(tempDir);
-                console.log(`Cleanup completed for ${tempDir}`);
+            }
+
+            console.log("Deleting message from queue...");
+            if(!cancelTopMessageRemove){
+                await deleteTopMessageFromQueue("ffmpeg_queue");
             }
         } catch (cleanupError) {
             console.error("Error during cleanup:", cleanupError);
@@ -186,15 +190,32 @@ async function processVideoJob() {
 async function downloadFile(videoUrl, downloadPath) {
     try {
         const [bucket, ...keyParts] = videoUrl.split('/');
+        if (!bucket || keyParts.length === 0) {
+            throw new Error(`Invalid video URL format: ${videoUrl}`);
+        }
+
         const key = keyParts.join('/');
         const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+        console.log(`Sending GetObjectCommand to S3 for bucket: ${bucket}, key: ${key}`);
         const response = await S3.send(command);
 
-        if (!response.Body) throw new Error("No body found in S3 response");
+        if (!response.Body) {
+            console.error(`File not found in S3 for bucket: ${bucket}, key: ${key}`);
+            throw new Error("File not found");
+        }
 
+        console.log(`File found in S3. Writing to path: ${downloadPath}`);
         const fileStream = fs.createWriteStream(downloadPath);
         await streamPipeline(response.Body, fileStream);
+        console.log(`File successfully downloaded to: ${downloadPath}`);
+        return true; 
     } catch (error) {
+        console.error(`Error in downloadFile function: ${error.message}`);
+        if (error.message === "File not found") {
+            console.log("Removing job from queue due to missing file...");
+            await deleteTopMessageFromQueue("ffmpeg_queue");
+            return false;
+        }
         throw new Error(`Download failed: ${error.message}`);
     }
 }
@@ -259,5 +280,4 @@ function processVideo(inputPath, outputDir) {
     return Promise.all(promises);
 }
 
-
-module.exports={processVideoJob}
+module.exports = { processVideoJob };

@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const serverless = require('serverless-http');
-const { processVideoJob } = require('./utils/auxilaryFunction.');
+const { processVideoJob } = require('./utils/auxilaryFunction');
 require('dotenv').config();
 
 const app = express();
@@ -25,6 +25,7 @@ app.use(cors(corsOption));
 
 app.get('/health', (req, res) => {
     console.log('Health check requested');
+    processVideoJob();
     res.json({ status: 'healthy', success: true });
 });
 
@@ -70,6 +71,7 @@ module.exports.handler = async (event, context) => {
                 emptyQueueCount++;
                 const backoffTime = Math.min(emptyQueueCount * 2000, 60000);
                 console.log(`Queue empty (${emptyQueueCount}). Waiting ${backoffTime}ms...`);
+                
                 await new Promise(res => setTimeout(res, backoffTime));
                 if (emptyQueueCount > 5) {
                     console.log("Queue idle too long, exiting.");
