@@ -91,14 +91,13 @@ async function uploadMessageToQueue(qName, message) {
 
 /**
  * Fetches objects from the queue that are older than the specified time
- * and removes them from the queue.
+ * without removing them from the queue.
  *
  * @param {string} qName - The name of the Redis queue
  * @param {number} time - Time in milliseconds (defaults to 3 hours)
- * @param {boolean} removeFromQueue - Whether to remove processed messages (defaults to true)
  * @returns {Promise<Array>} - Array of filtered message objects
  */
-async function fetchObjectsWhereUploadedTimeGreaterThan3Hours(qName, time = 3 * 60 * 60 * 1000, removeFromQueue = true) {
+async function fetchObjectsWhereUploadedTimeGreaterThan3Hours(qName, time = 3 * 60 * 60 * 1000) {
     try {
         const redisClient = await ensureConnection();
 
@@ -112,59 +111,54 @@ async function fetchObjectsWhereUploadedTimeGreaterThan3Hours(qName, time = 3 * 
 
         const cutoffTime = Date.now() - time;
         const filteredMessages = [];
-        const messagesToRemove = [];
 
-        // First pass: filter messages based on age
+        // Filter messages based on age
         for (const msg of messages) {
             try {
                 const messageObj = JSON.parse(msg);
 
                 const uploadTime = new Date(messageObj.createdAt).getTime();
                 if (uploadTime < cutoffTime) {
-                    filteredMessages.push(messageObj);
-                    messagesToRemove.push(msg);
+                    filteredMessages.push({ messageObj, rawMessage: msg });
                 }
             } catch (parseError) {
                 console.error('Error parsing message:', parseError, 'Message:', msg.substring(0, 100) + '...');
             }
         }
-
+        console.log(filteredMessages)
         console.log(`Found ${filteredMessages.length} messages older than the specified time threshold`);
-
-        // Remove messages if requested
-        if (removeFromQueue && messagesToRemove.length > 0) {
-            // Use multi to batch removal operations
-            const multi = redisClient.multi();
-
-            for (const msg of messagesToRemove) {
-                // Remove each message from the queue (only remove 1 occurrence)
-                multi.lRem(qName, 1, msg);
-            }
-
-            // Execute all removal commands in one batch
-            const results = await multi.exec();
-
-            console.log(`Removed ${messagesToRemove.length} messages from queue '${qName}'`);
-
-            // Check for any failed operations
-            let failedOperations = 0;
-            for (let i = 0; i < results.length; i++) {
-                if (results[i] === null || results[i] <= 0) {
-                    failedOperations++;
-                }
-            }
-
-            if (failedOperations > 0) {
-                console.warn(`${failedOperations} message removal operations failed`);
-            }
-        }
-
         return filteredMessages;
     } catch (error) {
-        console.error('Error occurred while fetching/removing old messages:', error);
+        console.error('Error occurred while fetching old messages:', error);
         return [];
     }
 }
+
+/**
+ * Removes a specific message from the queue.
+ *
+ * @param {string} qName - The name of the Redis queue
+ * @param {string} rawMessage - The raw message string to remove
+ * @returns {Promise<boolean>} - Whether the removal was successful
+ */
+async function removeMessageFromQueue(qName, rawMessage) {
+    try {
+        const redisClient = await ensureConnection();
+        const result = await redisClient.lRem(qName, 1, rawMessage);
+
+        if (result > 0) {
+            console.log(`Successfully removed message from queue '${qName}'`);
+            return true;
+        } else {
+            console.warn(`Failed to remove message from queue '${qName}'`);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error occurred while removing message from queue:', error);
+        return false;
+    }
+}
+
 async function disconnectRedis() {
     try {
         const redisClient = getRedisClient();
@@ -181,5 +175,6 @@ module.exports = {
     uploadMessageToQueue,
     disconnectRedis,
     getRedisClient,
-    fetchObjectsWhereUploadedTimeGreaterThan3Hours
+    fetchObjectsWhereUploadedTimeGreaterThan3Hours,
+    removeMessageFromQueue
 };

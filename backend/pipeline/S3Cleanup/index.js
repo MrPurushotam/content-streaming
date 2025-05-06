@@ -3,7 +3,7 @@ const serverless = require("serverless-http");
 const cors = require("cors");
 require("dotenv").config();
 
-const { fetchObjectsWhereUploadedTimeGreaterThan3Hours, uploadMessageToQueue } = require("./utils/Queue");
+const { fetchObjectsWhereUploadedTimeGreaterThan3Hours, uploadMessageToQueue, removeMessageFromQueue } = require("./utils/Queue");
 const S3 = require("./libs/aws");
 const prismaClient = require("./utils/PrismaClient");
 const { DeleteObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3");
@@ -36,7 +36,8 @@ async function checkS3ObjectExists(location) {
     await S3.send(new HeadObjectCommand({ Bucket: bucketName, Key: location }));
     return true;
   } catch (err) {
-    return err.name === "NotFound" ? false : null;
+    if (err.name === "NotFound" || err.name === "NoSuchKey") return false;
+    return null;
   }
 }
 
@@ -50,9 +51,10 @@ async function deleteS3Object(location) {
 }
 
 async function Cleaner(retryCount = 0) {
+  let tasks = [];
   try {
     console.log("Fetching objects older than 3 hours...");
-    const tasks = await fetchObjectsWhereUploadedTimeGreaterThan3Hours(
+    tasks = await fetchObjectsWhereUploadedTimeGreaterThan3Hours(
       "primary_bucket_queue",
       process.env.CLEANUP_INTERVAL_HOURS * 60 * 60 * 1000
     );
@@ -64,44 +66,62 @@ async function Cleaner(retryCount = 0) {
 
     let successCount = 0;
     const recordsToUpdate = [];
+    const tasksToRequeue = [];
 
     for (const task of tasks) {
-      const { location, id } = task;
+      const { location, id } = task.messageObj;
+      const rawMessage = task.rawMessage;
+
+      console.log(`Processing task with ID: ${id}, location: ${location}`);
+
       const exists = await checkS3ObjectExists(location);
       if (exists === null) {
-        console.log(`Error checking ${location}, skipping.`);
+        console.log(`Error checking existence of ${location}, skipping.`);
         continue;
       }
+      let shouldRequeue = false;
 
       if (exists) {
+        console.log(`Object ${location} exists. Attempting to delete...`);
         if (!(await deleteS3Object(location))) {
-          console.log(`Failed to delete ${location}, pushing to DLQ.`);
-          await uploadMessageToQueue(DLQ_QUEUE, task);
-          continue;
+          console.log(`Failed to delete ${location}, requeuing message to primary queue.`);
+          shouldRequeue = true;
+        }else{
+          console.log(`Successfully deleted ${location}.`);
+          recordsToUpdate.push(parseInt(id,10));
         }
       } else {
         console.log(`Object ${location} not found, skipping requeue.`);
-        continue;
+        recordsToUpdate.push(parseInt(id,10));
       }
 
-      recordsToUpdate.push(id);
+      const removed = await removeMessageFromQueue("primary_bucket_queue", rawMessage);
+      if (!removed) {
+        console.warn(`Failed to remove message for task ID: ${id} from queue.`);
+        continue;
+      }
+      if (shouldRequeue) {
+        await uploadMessageToQueue("primary_bucket_queue", task.messageObj);
+        continue;
+      }
+      tasksToRequeue.push(task);
     }
 
     if (recordsToUpdate.length > 0) {
       try {
+        console.log(`Updating database for records: ${recordsToUpdate}`);
         const result = await prismaClient.videoSourceInfo.updateMany({
           where: { id: { in: recordsToUpdate } },
           data: { deleted: true },
         });
 
         successCount = result.count;
-        console.log(`Updated ${successCount} records.`);
+        console.log(`Database update successful. ${successCount} records updated.`);
       } catch (dbError) {
         console.error("Database update error:", dbError);
-        for (const task of tasks) {
-          if (recordsToUpdate.includes(task.id)) {
-            await uploadMessageToQueue("primary_bucket_queue", task);
-          }
+        for (const task of tasksToRequeue) {
+          console.log(`Requeuing task with ID: ${task.messageObj.id} due to database error.`);
+          await uploadMessageToQueue("primary_bucket_queue", task.messageObj);
         }
       }
     }
@@ -114,7 +134,11 @@ async function Cleaner(retryCount = 0) {
       console.log(`Retrying (#${retryCount + 1})...`);
       return Cleaner(retryCount + 1);
     } else {
-      console.log("Max retries reached.");
+      console.log("Max retries reached. Requeuing tasks to primary queue.");
+      for (const task of tasks) {
+        console.log(`Requeuing task with ID: ${task.messageObj.id} to primary queue.`);
+        await uploadMessageToQueue("primary_bucket_queue", task.messageObj); // Requeue to primary queue
+      }
     }
   }
 }
