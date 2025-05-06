@@ -1,120 +1,82 @@
-name: NPM Package Release
+name: Deploy NPM Package
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
+    paths:
+      - "Packages/CustomPrismaPackage/**"
+      - ".github/workflows/npm-publish.yml"
+
   workflow_dispatch:
-    inputs:
-      version-type:
-        description: 'Version type (patch, minor, major)'
-        required: false
-        default: 'auto'
 
 jobs:
-  test-and-release:
+  publish:
     runs-on: ubuntu-latest
-    
+    defaults:
+      run:
+        working-directory: Packages/CustomPrismaPackage
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-      
+          node-version: "18.x"
+          registry-url: "https://registry.npmjs.org"
+
       - name: Install dependencies
         run: npm ci
-      
-      - name: Lint code
-        run: npm run lint
-      
-      - name: Run tests
-        run: npm test
-      
-      - name: Determine version bump
-        id: version-bump-type
-        if: ${{ github.event.inputs.version-type == 'auto' || github.event.inputs.version-type == '' }}
-        run: |
-          # Use commitizen/conventional-commit-types to determine version bump
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          
-          if [[ "$COMMIT_MSG" =~ ^BREAKING\ CHANGE:|^[^!]*!: ]]; then
-            echo "type=major" >> $GITHUB_OUTPUT
-            echo "Version bump: major (breaking change)"
-          elif [[ "$COMMIT_MSG" =~ ^feat: ]]; then
-            echo "type=minor" >> $GITHUB_OUTPUT
-            echo "Version bump: minor (new feature)"
-          elif [[ "$COMMIT_MSG" =~ ^fix:|^docs:|^style:|^refactor:|^perf:|^test:|^build:|^ci:|^chore: ]]; then
-            echo "type=patch" >> $GITHUB_OUTPUT
-            echo "Version bump: patch (non-feature change)"
-          else
-            echo "type=patch" >> $GITHUB_OUTPUT
-            echo "Version bump: patch (default)"
-          fi
-      
-      - name: Set manual version bump
-        id: manual-version
-        if: ${{ github.event.inputs.version-type != 'auto' && github.event.inputs.version-type != '' }}
-        run: |
-          echo "type=${{ github.event.inputs.version-type }}" >> $GITHUB_OUTPUT
-          echo "Version bump: ${{ github.event.inputs.version-type }} (manually set)"
-      
-      - name: Combine version type
-        id: version-type
-        run: |
-          if [[ "${{ steps.manual-version.outputs.type }}" != "" ]]; then
-            echo "type=${{ steps.manual-version.outputs.type }}" >> $GITHUB_OUTPUT
-          else
-            echo "type=${{ steps.version-bump-type.outputs.type }}" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Bump version
-        id: version-bump
-        run: |
-          # Disable git operations in npm version
-          NEW_VERSION=$(npm --no-git-tag-version version ${{ steps.version-type.outputs.type }})
-          echo "new_version=${NEW_VERSION:1}" >> $GITHUB_OUTPUT
-          echo "Bumped version to ${NEW_VERSION}"
-      
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Build package
         run: npm run build
-      
-      - name: Update changelog
+
+
+      - name: Check package version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          # Optional - automatically update CHANGELOG.md
-          npx conventional-changelog-cli -p angular -i CHANGELOG.md -s
-          git add CHANGELOG.md
-      
-      - name: Commit version bump
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PACKAGE_VERSION"
+          
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Warning: Tag version ($TAG_VERSION) doesn't match package.json version ($PACKAGE_VERSION)"
+            echo "Continuing anyway, but this might indicate an issue with versioning"
+          fi
+
+      - name: Create and push tag
+        id: create_tag
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "github-actions@github.com"
-          git add package.json package-lock.json
-          git commit -m "chore(release): v${{ steps.version-bump.outputs.new_version }} [skip ci]"
-          git tag -a "v${{ steps.version-bump.outputs.new_version }}" -m "Release v${{ steps.version-bump.outputs.new_version }}"
-      
-      - name: Push changes
-        run: |
-          git push origin HEAD:${GITHUB_REF#refs/heads/}
-          git push --tags
-      
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_NAME="v$PACKAGE_VERSION"
+          echo "Creating tag: $TAG_NAME"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+
+      - name: Publish package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.version-bump.outputs.new_version }}
-          release_name: Release v${{ steps.version-bump.outputs.new_version }}
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-      
-      - name: Publish to NPM
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
