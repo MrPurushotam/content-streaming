@@ -60,11 +60,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Lambda
+      - name: Upload package to S3 and deploy to Lambda
         run: |
+          # Upload the deployment package to S3
+          aws s3 cp function.zip s3://${{ secrets.DEP_BUCKET_NAME }}/primary-backend/function-${{ github.sha }}.zip
+
+          # Update Lambda function code from S3
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-            --zip-file fileb://function.zip
+            --s3-bucket ${{ secrets.DEP_BUCKET_NAME }} \
+            --s3-key primary-backend/function-${{ github.sha }}.zip
 
   deploy-service-1:
     name: Deploy S3 cleanup to lambda
