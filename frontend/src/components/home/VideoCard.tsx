@@ -11,7 +11,7 @@ interface VideoCardTypes {
     video?: any
 }
 
-const VideoCard: React.FC<VideoCardTypes> = ({ id, title = "dfds", views = 535, thumbnail = "https://i.pinimg.com/originals/d9/f2/15/d9f21515b1e38d83e94fdbce88f623b6.gif", video }) => {
+const VideoCard: React.FC<VideoCardTypes> = ({ id, title = "dfds", views = 535, thumbnail ="", video }) => {
     const [isHovered, setIsHovered] = useState<boolean>(false)
     const navigate = useNavigate();
     const setWatching = useSetRecoilState(currentWatchingVideoAtom);

@@ -53,7 +53,7 @@ async function processVideoJob() {
             } catch (error) {
                 console.error(`Failed to mark content ${contentId} as permanently failed:`, error);
             }
-            cancelTopMessageRemove=true;
+            cancelTopMessageRemove = true;
             return { message: `Job ${uniqueId} abandoned after ${MAX_RETRIES} attempts` };
         }
 
@@ -81,8 +81,23 @@ async function processVideoJob() {
         console.log(`Downloading video from S3: ${videoUrl}`);
         const downloadResult = await downloadFile(videoUrl, inputPath);
         if (!downloadResult) {
-            console.log("Skipping job due to missing file.");
-            return { message: "Skipped job due to missing file", uniqueId };
+            console.log("File not found in S3 bucket. Marking content as failed.");
+
+            // Update database to mark content as failed
+            if (contentId) {
+                try {
+                    await prismaClient.Content.update({
+                        where: { id: parseInt(contentId, 10) },
+                        data: { status: 'failed' },
+                    });
+                    console.log(`Content ${contentId} marked as failed due to missing file`);
+                } catch (dbError) {
+                    console.error("Error updating content status to failed:", dbError);
+                }
+            }
+
+            // We'll let the finally block handle message deletion from queue
+            return { message: "Skipped job due to missing file", uniqueId, status: "failed" };
         }
         console.log("Video downloaded successfully:", inputPath);
 
@@ -134,7 +149,7 @@ async function processVideoJob() {
             fetch(`${process.env.S3CLEANUP_FUNCTION_URL}/health`, {
                 method: "GET", headers: { 'Content-Type': 'application/json' }
             }).then(() => console.log("Sent request to S3 Cleanup server"))
-                .catch(err => console.error("Error sending request to video processing server:", err));
+                .catch(err => console.error("Error sending request to cleanup processing server:", err));
         } catch (error) {
             console.error("Failed to trigger S3 cleanup function:", error);
         }
@@ -178,7 +193,7 @@ async function processVideoJob() {
             }
 
             console.log("Deleting message from queue...");
-            if(!cancelTopMessageRemove){
+            if (!cancelTopMessageRemove) {
                 await deleteTopMessageFromQueue("ffmpeg_queue");
             }
         } catch (cleanupError) {
@@ -191,32 +206,60 @@ async function downloadFile(videoUrl, downloadPath) {
     try {
         const [bucket, ...keyParts] = videoUrl.split('/');
         if (!bucket || keyParts.length === 0) {
-            throw new Error(`Invalid video URL format: ${videoUrl}`);
+            console.error(`Invalid video URL format: ${videoUrl}`);
+            return false;
         }
 
         const key = keyParts.join('/');
         const command = new GetObjectCommand({ Bucket: bucket, Key: key });
         console.log(`Sending GetObjectCommand to S3 for bucket: ${bucket}, key: ${key}`);
-        const response = await S3.send(command);
 
-        if (!response.Body) {
-            console.error(`File not found in S3 for bucket: ${bucket}, key: ${key}`);
-            throw new Error("File not found");
+        let response;
+        try {
+            response = await S3.send(command);
+        } catch (s3Error) {
+            // Check specifically for file not found errors
+            if (s3Error.name === 'NoSuchKey' || s3Error.$metadata?.httpStatusCode === 404) {
+                console.error(`File not found in S3: bucket=${bucket}, key=${key}`);
+                return false;
+            }
+            // For other S3 errors, log and rethrow
+            console.error(`S3 error: ${s3Error.message}`);
+            throw s3Error;
         }
 
-        console.log(`File found in S3. Writing to path: ${downloadPath}`);
-        const fileStream = fs.createWriteStream(downloadPath);
-        await streamPipeline(response.Body, fileStream);
-        console.log(`File successfully downloaded to: ${downloadPath}`);
-        return true; 
-    } catch (error) {
-        console.error(`Error in downloadFile function: ${error.message}`);
-        if (error.message === "File not found") {
-            console.log("Removing job from queue due to missing file...");
-            await deleteTopMessageFromQueue("ffmpeg_queue");
+        // Verify we have a valid response with a body
+        if (!response || !response.Body) {
+            console.error('S3 returned empty response or missing body');
             return false;
         }
-        throw new Error(`Download failed: ${error.message}`);
+
+        // Create the write stream and handle the download
+        console.log(`File found in S3. Writing to path: ${downloadPath}`);
+        const fileStream = fs.createWriteStream(downloadPath);
+
+        try {
+            await streamPipeline(response.Body, fileStream);
+
+            // Verify file was written successfully
+            if (fs.existsSync(downloadPath) && fs.statSync(downloadPath).size > 0) {
+                console.log(`File successfully downloaded to: ${downloadPath}`);
+                return true;
+            } else {
+                console.error(`Download completed but file is empty or missing: ${downloadPath}`);
+                return false;
+            }
+        } catch (streamError) {
+            console.error(`Error streaming file content: ${streamError.message}`);
+            // Clean up partial download if it exists
+            if (fs.existsSync(downloadPath)) {
+                fs.unlinkSync(downloadPath);
+            }
+            throw new Error(`Failed to stream file content: ${streamError.message}`);
+        }
+    } catch (error) {
+        console.error(`Download failed: ${error.message}`);
+        return false;
     }
 }
 
