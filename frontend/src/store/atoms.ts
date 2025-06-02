@@ -1,4 +1,4 @@
-import { User, Video, adminVideoTypes} from '@/types/common';
+import { User, Video, adminVideoTypes } from '@/types/common';
 import { atom } from 'recoil';
 
 
@@ -59,3 +59,8 @@ export const editContentAtom = atom<Video | null>({
   key: 'editContentAtom',
   default: null
 });
+
+export const globalLoadingAtom = atom<boolean>({
+  key: "globalLoading",
+  default: false
+})
