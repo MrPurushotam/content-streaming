@@ -42,8 +42,8 @@ const UploadContent = () => {
   const contentIdRef = useRef<number>(0);
 
   // Add these constants for file size limits
-  const MAX_THUMBNAIL_SIZE_MB: number = 4;
-  const MAX_VIDEO_SIZE_MB: number = 150;
+  const MAX_THUMBNAIL_SIZE_MB: number = 6;
+  const MAX_VIDEO_SIZE_MB: number = 1500;
 
   // Helper function to check file size
   const isFileSizeValid = (file: File, maxSizeMB: number): boolean => {
