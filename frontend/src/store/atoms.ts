@@ -9,6 +9,7 @@ export interface HomePageVideosList {
   thumbnail?: string;
   views: number;
   manifestUrl?: string;
+  uploadTime?: Date;
 }
 
 // UI State

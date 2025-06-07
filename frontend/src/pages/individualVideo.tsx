@@ -3,22 +3,27 @@ import { currentWatchingVideoAtom } from "@/store/atoms";
 import { useParams } from "react-router-dom";
 import { useRecoilState } from "recoil";
 import Seo from '../components/seo/seo';
-import { useEffect, useRef, useState } from "react"; // Add useState import
+import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Spinner from "@/components/spinner";
-import { AlignLeft, Clock5, Eye, Heart, Info, Share2, Signal, SignalHigh } from "lucide-react";
+import { AlignLeft, Clock5, Eye, Heart, Share2, SignalHigh } from "lucide-react";
+
 const IndividualVideo = () => {
     const { id } = useParams();
     const [content, setContent] = useRecoilState(currentWatchingVideoAtom);
     const { toast } = useToast();
     const viewCountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [loading, setLoading] = useState(false); // Add loading state
+    const [loading, setLoading] = useState(true);
+    const [videoError, setVideoError] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
     const contentRef = useRef(content);
+    const playerKeyRef = useRef(0);
+    const retryCountRef = useRef(0);
+    const maxRetries = 3;
 
     // Format thumbnail URL to ensure it's treated as absolute
     const formatUrl = (url: string | undefined): string => {
-
         if (!url) return "";
         if (url.startsWith('http://') || url.startsWith('https://')) {
             return url;
@@ -37,48 +42,160 @@ const IndividualVideo = () => {
 
     useEffect(() => {
         const fetchContent = async () => {
+            if (!id) return;
+            
             try {
-                setContent(null);
+                setLoading(true);
+                setVideoError(false);
+                retryCountRef.current = 0;
+                
                 const resp = await api.get(`/video/${id}`);
-                if (resp.data.success) {
-                    contentRef.current = resp.data.content;
-                    setContent(resp.data.content);
-                    toast({ title: "Fetched content.", description: "Content fetched successfully." });
+                if (resp.data.success && resp.data.content) {
+                    const newContent = resp.data.content;
+                    contentRef.current = newContent;
+                    setContent(newContent);
+                    // Force re-render of HLS player with new key
+                    playerKeyRef.current += 1;
+                    
+                    // Validate manifest URL
+                    const manifestUrl = formatUrl(newContent.manifestUrl);
+                    if (!manifestUrl) {
+                        throw new Error("Invalid manifest URL");
+                    }
+                    
+                    console.log("Video loaded:", {
+                        id: newContent.id,
+                        manifestUrl,
+                        title: newContent.title
+                    });
+                } else {
+                    throw new Error("Video not found or invalid response");
                 }
             } catch (error: any) {
-                console.log("Error fetching content: ", error);
-                toast({ title: "Error fetching content.", description: error.message, variant: "destructive" });
+                console.error("Error fetching content: ", error);
+                setVideoError(true);
+                toast({ 
+                    title: "Error loading video", 
+                    description: error.response?.data?.message || error.message || "Failed to load video", 
+                    variant: "destructive" 
+                });
             } finally {
                 setLoading(false);
             }
         };
 
-        if (!content && id) {
-            setLoading(true)
+        // Always fetch if we have an ID, regardless of current content state
+        // This fixes direct link access issues
+        if (id && (!content || content.id !== parseInt(id,10))) {
             fetchContent();
+        } else if (content && id && content.id === parseInt(id,10)) {
+            // Content already matches, just update refs and stop loading
+            contentRef.current = content;
+            setLoading(false);
+        } else {
+            setLoading(false);
         }
-    }, [id, content, setContent, toast]);
+
+        // Cleanup function
+        return () => {
+            if (viewCountTimeoutRef.current) {
+                clearTimeout(viewCountTimeoutRef.current);
+            }
+        };
+    }, [id, toast, setContent]);
+
+    // Separate effect to sync content changes
+    useEffect(() => {
+        if (content) {
+            contentRef.current = content;
+        }
+    }, [content]);
 
     const handleVideoPlay = () => {
+        console.log("Video started playing");
+        setIsBuffering(false);
         if (viewCountTimeoutRef.current) {
             clearTimeout(viewCountTimeoutRef.current);
         }
         viewCountTimeoutRef.current = setTimeout(async () => {
             try {
                 await api.put(`/video/view/${id}`);
+                console.log("View count updated");
             } catch (error: any) {
                 console.log("Error updating view count: ", error);
-                toast({ title: "Error updating view count.", description: error.message, variant: "destructive" });
             }
         }, 5000);
     };
+
+    const handleVideoError = (error?: any) => {
+        console.error("Video playback error:", error);
+        
+        // Auto-retry logic for network errors
+        if (retryCountRef.current < maxRetries) {
+            retryCountRef.current += 1;
+            console.log(`Attempting video retry ${retryCountRef.current}/${maxRetries}`);
+            
+            setTimeout(() => {
+                playerKeyRef.current += 1;
+                setIsBuffering(true);
+            }, 2000);
+            
+            toast({
+                title: "Connection issue",
+                description: `Retrying video... (${retryCountRef.current}/${maxRetries})`,
+                variant: "default"
+            });
+        } else {
+            setVideoError(true);
+            toast({
+                title: "Video playback error",
+                description: "Unable to play video after multiple attempts. Please check your connection.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleVideoWaiting = () => {
+        console.log("Video is buffering...");
+        setIsBuffering(true);
+    };
+
+    const handleVideoCanPlay = () => {
+        console.log("Video can play");
+        setIsBuffering(false);
+        setVideoError(false);
+    };
+
+    const handleVideoStalled = () => {
+        console.log("Video stalled, attempting recovery...");
+        setIsBuffering(true);
+        
+        // Auto-recovery for stalled streams
+        setTimeout(() => {
+            if (retryCountRef.current < maxRetries) {
+                retryCountRef.current += 1;
+                playerKeyRef.current += 1;
+            }
+        }, 5000);
+    };
+
+    const retryVideoLoad = () => {
+        console.log("Manual retry triggered");
+        setVideoError(false);
+        setIsBuffering(true);
+        retryCountRef.current = 0;
+        playerKeyRef.current += 1;
+    };
+
+    const manifestUrl = formatUrl(contentRef.current?.manifestUrl);
+    const posterUrl = formatUrl(content?.thumbnail);
 
     return (
         <>
             <Seo
                 title={content?.title || "Untitled Video"}
                 description={content?.description || "Watch this amazing video on our stream application."}
-                keywords={`video, stream, watch, content, purushotam, hls, video streaming,${content?.title.split(" ").join(",")}`}
+                keywords={`video, stream, watch, content, purushotam, hls, video streaming,${content?.title?.split(" ").join(",") || ""}`}
                 name="Stream by Purushotam"
                 type="video"
                 address={`/watch/${id}`}
@@ -89,18 +206,61 @@ const IndividualVideo = () => {
                     <div className="relative mb-8">
                         <div className="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-200">
                             {loading ? (
-                                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-slate-900 to-slate-800">
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-r from-slate-900 to-slate-800 text-white">
                                     <Spinner />
+                                    <p className="mt-4 text-sm text-slate-300">Loading video...</p>
+                                </div>
+                            ) : videoError ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-r from-red-900 to-red-800 text-white">
+                                    <div className="text-center p-6">
+                                        <h3 className="text-xl font-semibold mb-2">Video unavailable</h3>
+                                        <p className="text-red-200 mb-4">
+                                            {retryCountRef.current >= maxRetries 
+                                                ? "Unable to load video after multiple attempts" 
+                                                : "There was an error loading this video"}
+                                        </p>
+                                        <button 
+                                            onClick={retryVideoLoad}
+                                            className="px-4 py-2 bg-white text-red-800 rounded-lg hover:bg-red-50 transition-colors"
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
-                                content?.manifestUrl && contentRef.current && (
-                                    <HLSPlayer
-                                        key={content.manifestUrl}
-                                        src={formatUrl(contentRef.current.manifestUrl)}
-                                        poster={formatUrl(content.thumbnail)}
-                                        options={{ fullscreen: true, playbackRates: [0.5, 1, 1.5, 2], muted: false }}
-                                        onPlay={handleVideoPlay}
-                                    />)
+                                content?.manifestUrl && manifestUrl && (
+                                    <>
+                                        <HLSPlayer
+                                            key={`${content.id}-${playerKeyRef.current}`}
+                                            src={manifestUrl}
+                                            poster={posterUrl}
+                                            options={{ 
+                                                fullscreen: true, 
+                                                playbackRates: [0.5, 1, 1.5, 2], 
+                                                muted: false,
+                                                autoplay: false,
+                                                controls: true,
+                                                preload: 'metadata',
+                                                crossOrigin: 'anonymous',
+                                                playsInline: true
+                                            }}
+                                            onPlay={handleVideoPlay}
+                                            // @ts-expect-error becuase type has not be defined accurately 
+                                            onError={handleVideoError}
+                                            onWaiting={handleVideoWaiting}
+                                            onCanPlay={handleVideoCanPlay}
+                                            onStalled={handleVideoStalled}
+                                        />
+                                        {isBuffering && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                                                <div className="flex flex-col items-center text-white">
+                                                    <Spinner />
+                                                    <p className="mt-2 text-sm">Buffering...</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )
                             )}
                         </div>
                         {/* Decorative elements */}
@@ -115,12 +275,12 @@ const IndividualVideo = () => {
                             <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                                        {content?.title}
+                                        {content?.title || "Loading..."}
                                     </h1>
                                     <div className="flex items-center gap-2 text-slate-600">
-                                        <Eye className="w- h-3 text-current" />
-                                        <span className="text-xs md:text-sm font-semibold flex flex-col">
-                                            {content?.views?.toLocaleString() } views
+                                        <Eye className="w-5 h-5 text-current" />
+                                        <span className="text-sm font-semibold">
+                                            {content?.views?.toLocaleString() || "0"} views
                                         </span>
                                     </div>
                                 </div>
@@ -130,7 +290,7 @@ const IndividualVideo = () => {
                                     <div className="flex items-center gap-2 text-slate-600">
                                         <Clock5 className="w-5 h-5" />
                                         <span className="text-sm">
-                                            {content?.createdAt ? new Date(content.createdAt).toLocaleDateString('en-US', {
+                                            {content?.uploadTime ? new Date(content.uploadTime).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'long',
                                                 day: 'numeric'
@@ -174,7 +334,7 @@ const IndividualVideo = () => {
                                     <div className="flex justify-between items-center py-2 border-b border-slate-100">
                                         <span className="text-slate-600">Total Views</span>
                                         <span className="font-semibold text-slate-900">
-                                            {content?.views?.toLocaleString() || "121"}
+                                            {content?.views?.toLocaleString() || "0"}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center py-2 border-b border-slate-100">

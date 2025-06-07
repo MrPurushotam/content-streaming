@@ -1,6 +1,6 @@
 import { useEffect, useRef, MutableRefObject, useState } from "react";
 import videojs from "video.js";
-// @ts-ignore
+// @ts-expect-error unexpected type error 
 import type { VideoJsPlayer, VideoJsPlayerOptions } from "video.js";
 import "@videojs/http-streaming";
 import "video.js/dist/video-js.css";
