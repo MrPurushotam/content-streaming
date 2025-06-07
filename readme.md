@@ -1,58 +1,30 @@
-# Video Streaming Platform
+# Livestreaming Application
 
-A comprehensive video streaming application that allows users to upload, process, and stream videos with adaptive bitrate streaming (HLS). This project demonstrates a real-world implementation of video processing, cloud storage, and streaming technologies.
+A full-featured video streaming platform built with modern web technologies and cloud infrastructure, enabling users to upload, process, and stream videos with adaptive bitrate streaming.
 
 ![Project Banner](https://placehold.co/1200x400?text=Video+Streaming+Platform)
 
-## 📋 Table of Contents
+## 🌟 Features
 
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Components](#components)
-- [Installation & Setup](#installation--setup)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Development](#development)
-- [Deployment](#deployment)
-- [Technical Details](#technical-details)
+### Core Functionality
+- **Video Upload & Processing**: Secure video upload to AWS S3 with automated processing pipeline
+- **Adaptive Bitrate Streaming**: HLS (HTTP Live Streaming) with multiple quality options (360p, 720p, 1080p)
+- **Real-time Video Player**: Custom HLS player with quality selection and buffering management
+- **Content Management**: Admin dashboard for video management and user approval
+
+### Technical Features
+- **Cloud Infrastructure**: AWS Lambda-based serverless video processing
+- **Queue Management**: Redis-based job queuing for video processing tasks
+- **CDN Integration**: CloudFront distribution for optimized content delivery
+- **File Size Validation**: Client and server-side file size validation
+- **Presigned URLs**: Secure direct-to-S3 uploads with temporary access
+- **Retry Logic**: Automated retry mechanisms for failed video processing
 
 ## 🔍 Overview
 
 This platform enables content creators to upload videos, which are then automatically processed, transcoded into multiple resolutions, and made available for streaming with adaptive bitrate technology. The application ensures high-quality video playback regardless of the viewer's network conditions.
 
 The system uses a queue-based architecture to handle video processing asynchronously, ensuring scalability and reliability even with large video files and high traffic.
-
-## ✨ Features
-
-- **User Authentication & Authorization**
-  - Role-based access control (admin/user roles)
-  - Secure JWT-based authentication
-  - Admin approval workflow for content creators
-
-- **Video Management**
-  - Upload videos via presigned S3 URLs
-  - Add metadata (title, description, thumbnail)
-  - Public/private visibility control
-  - View count tracking
-  - Video deletion
-
-- **Video Processing**
-  - Automatic transcoding to multiple resolutions (360p, 720p, 1080p)
-  - HTTP Live Streaming (HLS) format conversion
-  - Adaptive bitrate streaming
-  - Fault-tolerant processing with retries
-
-- **Content Delivery**
-  - CDN integration for fast global delivery
-  - Adaptive streaming based on viewer's bandwidth
-  - Optimized for various devices and network conditions
-
-- **Administration**
-  - User management dashboard
-  - Content moderation
-  - System health monitoring
 
 ## 🏗️ Architecture
 
@@ -103,41 +75,6 @@ The application follows a modern microservice-oriented architecture:
 - **Video Processing**:
   - FFmpeg for transcoding
   - HLS (HTTP Live Streaming) protocol
-
-## 🧩 Components
-
-The application consists of several key components:
-
-### 1. Main Backend Server
-
-Handles API requests, authentication, and manages the content database. Coordinates the video upload and processing workflow.
-
-### 2. Custom Prisma Package
-
-A shared Prisma client package that centralizes database schema and client generation for use across microservices.
-
-### 3. Video Processing Service
-
-A serverless function that:
-- Retrieves video processing jobs from the queue
-- Downloads videos from primary S3 bucket
-- Transcodes videos into multiple resolutions using FFmpeg
-- Creates HLS playlists and segments
-- Uploads processed files to the secondary S3 bucket
-- Updates the database with video details
-
-### 4. S3 Cleanup Service
-
-A serverless function that handles cleanup of temporary files and ensures the storage is efficiently managed.
-
-### 5. Frontend Application
-
-React-based user interface that provides:
-- User authentication
-- Video uploading
-- Content browsing
-- Video playback with adaptive streaming
-- Admin dashboard
 
 ## 📦 Installation & Setup
 
@@ -360,52 +297,86 @@ The backend is designed to be deployed as serverless functions:
 
 2. Deploy the built assets to a static hosting service (AWS S3, Vercel, Netlify)
 
-## 🔍 Technical Details
+## 📋 API Endpoints
 
-### Video Processing Workflow
+### Authentication
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `GET /auth/verify` - Token verification
 
-1. **Upload**: User uploads video to S3 using presigned URL
-2. **Queue**: Video details are added to Redis queue
-3. **Process**: Video processing service:
-   - Downloads video from S3
-   - Uses FFmpeg to transcode to multiple resolutions
-   - Creates HLS playlist and segments
-   - Uploads processed files to S3
-4. **Update**: Database is updated with video details
-5. **Cleanup**: Original video is marked for cleanup
+### Content Management
+- `GET /video/` - Get all public videos
+- `GET /video/:id` - Get specific video
+- `PUT /video/view/:id` - Increment view count
+- `POST /content/metadata` - Upload video metadata
+- `POST /content/confirmsource` - Confirm video upload
+- `GET /content/status/:id` - Get processing status
 
-### HLS Implementation
+### Admin
+- `GET /user/uploads` - Get user's uploaded videos
+- `PUT /video/:id` - Update video details
+- `DELETE /video/:id` - Delete video
+- `GET /user/list/admin` - Get pending admin approvals
 
-The application creates HTTP Live Streaming (HLS) content:
-- Master playlist (`master.m3u8`) pointing to resolution-specific playlists
-- Resolution-specific playlists (`playlist.m3u8`) for each quality level (360p, 720p, 1080p)
-- Video segments (`.ts` files) of configurable duration (10 seconds)
+## 🎥 Video Processing Pipeline
 
-### Error Handling & Retry Logic
+1. **Upload Request**: Client requests presigned URL
+2. **Direct Upload**: Video uploaded directly to S3 primary bucket
+3. **Queue Processing**: Video processing job added to Redis queue
+4. **Lambda Processing**: FFmpeg processes video into multiple bitrates
+5. **HLS Generation**: Creates master playlist and segment files
+6. **S3 Storage**: Processed files stored in secondary bucket
+7. **Database Update**: Video status updated to "published"
+8. **CDN Distribution**: Content available via CloudFront
 
-The video processing pipeline includes sophisticated error handling:
-- Failed jobs are requeued with retry count tracking
-- Maximum retry limit prevents infinite loops
-- Dead-letter queue for permanently failed jobs
-- Detailed logging for debugging
+## 🔧 File Size Limits
 
-### Security Considerations
+- **Video Files**: 100MB maximum
+- **Thumbnail Images**: 5MB maximum
+- **Supported Formats**: MP4, MOV, AVI (video) / JPG, PNG, WEBP (thumbnails)
 
-- JWT-based authentication with secure token handling
-- Role-based access control
-- Presigned URLs for secure S3 uploads
-- Rate limiting to prevent abuse
-- Input validation on all API endpoints
+## 🎯 Quality Options
 
-## 📝 License
+The application automatically generates three quality levels:
+- **360p**: 640x360, 800k bitrate
+- **720p**: 1280x720, 2.5M bitrate  
+- **1080p**: 1920x1080, 5M bitrate
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🛡️ Security Features
 
-## 👤 Author
+- JWT-based authentication
+- Admin role-based access control
+- Rate limiting on API endpoints
+- File type and size validation
+- CORS protection
+- Presigned URL expiration (3 hours)
 
-**Purushotam Jeswani**
+## 📱 Responsive Design
 
+The application is fully responsive and optimized for:
+- Desktop browsers
+- Tablet devices
+- Mobile phones
+- Touch interactions
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📄 License
+
+This project is licensed under the ISC License.
+
+## 👨‍💻 Developer
+
+Built by **Purushotam Jeswani**
 - GitHub: [@MrPurushotam](https://github.com/MrPurushotam)
+- LinkedIn: [purushotamjeswani](https://linkedin.com/in/purushotamjeswani)
+- Email: work.purushotam@gmail.com
 
 ---
 
