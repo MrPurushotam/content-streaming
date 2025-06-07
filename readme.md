@@ -2,7 +2,7 @@
 
 A full-featured video streaming platform built with modern web technologies and cloud infrastructure, enabling users to upload, process, and stream videos with adaptive bitrate streaming.
 
-![Project Banner](https://placehold.co/1200x400?text=Video+Streaming+Platform)
+![Project Banner](./frontend/public/Homepage.png)
 
 ## 🌟 Features
 
