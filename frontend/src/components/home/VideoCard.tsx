@@ -16,17 +16,22 @@ const VideoCard: React.FC<VideoCardTypes> = ({ id, title = "dfds", views = 535, 
     const navigate = useNavigate();
     const setWatching = useSetRecoilState(currentWatchingVideoAtom);
     
-    // Format thumbnail URL to ensure it's treated as absolute
     const formatThumbnailUrl = (url: string | undefined): string => {
         if (!url) return "https://i.pinimg.com/originals/d9/f2/15/d9f21515b1e38d83e94fdbce88f623b6.gif";
         
-        // If URL already starts with http or https, use it as is
         if (url.startsWith('http://') || url.startsWith('https://')) {
             return url;
         }
         
-        // Otherwise, ensure it's an absolute URL
-        return url;
+        if (url.startsWith('https:/') && !url.startsWith('https://')) {
+            return url.replace('https:/', 'https://');
+        }
+        
+        if (url.startsWith('http:/') && !url.startsWith('http://')) {
+            return url.replace('http:/', 'http://');
+        }
+        
+        return `https://${url}`;
     };
     
     const openVideo = () => {

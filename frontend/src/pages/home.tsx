@@ -7,20 +7,20 @@ import { useEffect, useState } from "react";
 
 // Animated ellipsis component
 const AnimatedEllipsis = () => {
-  const [dots, setDots] = useState("");
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots(prev => {
-        if (prev.length >= 3) return "";
-        return prev + ".";
-      });
-    }, 500);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  return <span className="w-6 inline-block">{dots}</span>;
+    const [dots, setDots] = useState("");
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setDots(prev => {
+                if (prev.length >= 3) return "";
+                return prev + ".";
+            });
+        }, 500);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    return <span className="w-6 inline-block">{dots}</span>;
 };
 
 const Home = () => {
@@ -37,27 +37,32 @@ const Home = () => {
                 type="website"
                 address={'/'}
             />
-            
-            {globalLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
-                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-                    <div className="text-blue-600 font-semibold mt-4 text-lg flex">
+
+            {content.length < 1 &&
+                <p className="text-md font-medium tracking-wide text-center text-amber-600 mt-5">
+                    Nothing here to watch. Come back later.
+                </p>
+            }
+
+            {globalLoading ? (
+                <div className="w-full h-96 flex flex-col items-center justify-center">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-4" />
+                    <div className="text-gray-800 font-semibold text-xl flex items-center">
                         Loading<AnimatedEllipsis />
                     </div>
+                    <p className="text-gray-600 mt-2 text-center">Fetching videos for you</p>
+                </div>
+            ) : (
+                <div className="w-full h-full px-4 py-3 flex flex-wrap gap-4 justify-center">
+                    {
+                        content?.map((video) => {
+                            return (
+                                <VideoCard key={video.id} id={video.id} thumbnail={video.thumbnail} title={video.title} views={video.views} video={video} />
+                            )
+                        })
+                    }
                 </div>
             )}
-            
-            <h1 className="text-2xl font-bold text-center text-gray-800">Home</h1>
-            <p className="text-md font-medium tracking-wide text-center text-amber-600">{content.length > 0 ? "Scroll through videos here. Hope you have a good time!" : "Nothing here to watch. Come back later."}</p>
-            <div className="w-full h-full px-4 py-3 flex flex-wrap gap-4 justify-center">
-                {
-                    content?.map((video) => {
-                        return (
-                            <VideoCard key={video.id} id={video.id} thumbnail={video.thumbnail} title={video.title} views={video.views} video={video} />
-                        )
-                    })
-                }
-            </div>
         </div>
     )
 }
