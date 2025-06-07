@@ -24,6 +24,24 @@ interface UploadedVideoListProps {
   onDelete: (id: number) => void;
 }
 
+const formatUrl = (url: string | undefined): string => {
+  if (!url) return "";
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  if (url.startsWith('https:/') && !url.startsWith('https://')) {
+    return url.replace('https:/', 'https://');
+  }
+
+  if (url.startsWith('http:/') && !url.startsWith('http://')) {
+    return url.replace('http:/', 'http://');
+  }
+
+  return `https://${url}`;
+};
+
+
 const UploadedVideoList: React.FC<UploadedVideoListProps> = ({ video, onClick, onEdit, onDelete }) => {
   return (
     <div
@@ -31,15 +49,15 @@ const UploadedVideoList: React.FC<UploadedVideoListProps> = ({ video, onClick, o
 
       <div
         className={`w-48 h-32 aspect-video rounded-lg bg-neutral-100/60 border-2 border-neutral-900 p-2 flex justify-center items-center`} onClick={() => onClick(video.id)}>
-        <img src={video?.thumbnail || "https://i.pinimg.com/originals/d9/f2/15/d9f21515b1e38d83e94fdbce88f623b6.gif"} alt={video?.title} className="h-full object-cover rounded-lg bg-contain" />
+        <img src={formatUrl(video?.thumbnail)} alt={video?.title} className="h-full object-cover rounded-lg bg-contain text-sm flex justify-center items-center" />
       </div>
 
       <div className="w-full flex flex-col gap-1 px-1 py-2">
         <div className="flex w-full gap-2 ">
-          <span className="flex-1 text-lg font-semibold tracking-wide">{video?.title || "fjs sdkjfsd ksdjf"}</span>
+          <span className="flex-1 text-lg font-semibold tracking-wide">{video?.title}</span>
           <div className="flex gap-2 px-3 py-1 items-center">
 
-            <Button onClick={() => onClick(video?.id)} variant={"link"} asChild className="p-1 rounded-md w-7 h-7" disabled={video?.status === "deleted" && !video?.manifestUrl.trim()}>
+            <Button onClick={() => onClick(video?.id)} variant={"link"} asChild className="p-1 rounded-md w-7 h-7" disabled={video?.status !== "public" || !video?.manifestUrl.trim()}>
               <SquareArrowOutUpRight />
             </Button>
 
@@ -58,12 +76,12 @@ const UploadedVideoList: React.FC<UploadedVideoListProps> = ({ video, onClick, o
           </div>
         </div>
 
-        <p className="text-sm font-medium tracking-wide">{video?.description || "dfsjdbh dsfkjsd "}</p>
+        <p className="text-sm font-medium tracking-wide">{video?.description}</p>
 
         <div className="flex flex-row gap-2 items-center">
           <span className="rounded-full px-3 py-1 bg-blue-200 text-sm font-bold text-black capitalize">{video?.public ? "public" : "private"}</span>
           <span className="font-bold text-sm bg-green-200 text-bold py-1 px-3 rounded-full">{video?.views} views</span>
-          <span className="font-bold text-sm bg-yellow-100 text-black py-1 px-3 rounded-full capitalize">{video?.status || "THing"}</span>
+          <span className="font-bold text-sm bg-yellow-100 text-black py-1 px-3 rounded-full capitalize">{video?.status}</span>
           <span className="font-bold text-sm text-black capitalize">{new Date(video?.uploadTime).toLocaleString()}</span>
         </div>
       </div>

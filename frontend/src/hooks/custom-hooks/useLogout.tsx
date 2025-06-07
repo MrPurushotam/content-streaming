@@ -20,20 +20,20 @@ const useLogout = () => {
     const logout = useCallback(async (customMessage?: string) => {
         try {
             await api.get("/user/logout")
-            resetLoggedIn();
-            resetUser();
+            window.localStorage.removeItem("token");
+            window.localStorage.removeItem("adminToken");
             resetIsAdmin();
             resetUseApprovalList();
             resetAdminEditContent();
             resetAdminUploadedContent();
             resetFetchUserDetail();
+            resetUser();
+            resetLoggedIn();
             navigate("/")
         } catch (error: any) {
             console.log("Unfortunate error occurred.", error.message)
             toast({ title: "Error while logging out.", description: error.message, variant: "destructive" })
-        } finally {
-            window.localStorage.removeItem("token");
-            window.localStorage.removeItem("adminToken");
+        } finally {            
             toast({ title: "Logged out.", description: customMessage || "You are logged out." })
         }
     }, [resetAdminEditContent, resetAdminUploadedContent, resetFetchUserDetail, resetIsAdmin, resetLoggedIn, resetUseApprovalList, resetUser, toast, navigate])

@@ -121,7 +121,7 @@ const Dashboard = () => {
     setLoading("");
   }, []);
 
-  const openVideo = async (id: number = 11) => {
+  const openVideo = async (id: number) => {
     navigate(`/watch/${id}`);
   };
   const deleteUploadedVideo = async (id: number) => {
