@@ -59,10 +59,9 @@ const AboutDev = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium">Stream Application (Based on Adaptive Bitrate Streaming)</p>
+                  <p className="font-medium">Chatit (Peer-to-peer Chat Application)</p>
                   <p className="text-sm text-gray-600 space-x-2">
-                    <a className="text-blue-600 font-semibold inline hover:underline" href="https://stream.purushotamjeswani.in" target="_blank">Link</a>
-                    <a className="text-blue-600 font-semibold inline hover:underline" href="https://github.com/MrPurushotam/content-streaming" target="_blank">Github</a>
+                    <a className="text-blue-600 font-semibold inline hover:underline" href="https://chatit.purushotamjeswani.in" target="_blank">Link</a>
                   </p>
 
                 </div>
